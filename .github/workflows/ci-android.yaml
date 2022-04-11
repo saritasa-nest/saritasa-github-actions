@@ -1,0 +1,90 @@
+name: CI-Android
+
+# ----------------------------------------------------------------------------------------------------------
+# Android CI Pipeline
+# - build/sign Android app with fastlane
+# - distribute android application through Firebase
+# ----------------------------------------------------------------------------------------------------------
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    secrets:
+      FIREBASE_TOKEN:
+        required: true
+      RELEASE_KEYSTORE:
+        required: true
+      RELEASE_KEYSTORE_PASSWORD:
+        required: true
+      SLACK_URL:
+        required: true
+
+jobs:
+  Build:
+    runs-on: [self-hosted, macos, x64]
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Set up ruby
+        if: ${{ runner.name == 'Hosted Agent' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+          bundler-cache: true
+
+      - name: Increment build number
+        uses: chkfung/android-version-actions@v1.1
+        with:
+          gradlePath: app/build.gradle
+          versionCode: ${{github.run_number}}
+          versionName: 1.0
+
+      - name: Setup fastlane
+        run: |
+          gem install bundler:2.2.16
+          bundle install --jobs 4 --retry 3 
+
+      - name: Fastlane android release
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SLACK_URL: ${{ secrets.SLACK_URL }}
+        run: |
+          rm -rf fastlane/.env.secret # this is needed for local publishing only
+          rm -rf saritasa-keystore # this is needed for local publishing only
+          echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > release.keystore.asc
+          gpg --batch --passphrase "${{ secrets.RELEASE_KEYSTORE_PASSWORD }}" -d -o saritasa-keystore release.keystore.asc
+          chmod +x ./gradlew
+          
+          bundle exec fastlane android release --env ${{ inputs.environment }}
+
+      - name: Commit
+        if: github.event_name != 'pull_request'
+        run: |
+          git pull
+          git config --global user.name 'github actions'
+          git config --global user.email 'devops+caregiver@saritasa.com'
+          git add app
+          git commit -m "Update android gradle build number"
+          git push
+
+  Clean_Workspace:
+    runs-on: [self-hosted, macos, x64]
+    timeout-minutes: 25
+    needs: Build
+    steps:
+      - name: Clean Workspace
+        run: rm -rf "${{ github.workspace }}"

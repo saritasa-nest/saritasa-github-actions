@@ -1,0 +1,71 @@
+name: CI-iOS
+
+# ----------------------------------------------------------------------------------------------------------
+# iOS CI Pipeline
+# - build/sign iOS app with fastlane
+# - distribute iOS application through Firebase
+# ----------------------------------------------------------------------------------------------------------
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    secrets:
+      FIREBASE_TOKEN:
+        required: true
+      FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD:
+        required: true
+      FASTLANE_SESSION:
+        required: true
+      FASTLANE_PASSWORD:
+        required: true
+      SLACK_URL:
+        required: true
+jobs:
+  Build:
+    runs-on: [self-hosted, macos, x64]
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: List available xcode versions
+        run: ls /Applications | grep Xcode
+
+      - name: Set up ruby
+        if: ${{ runner.name == 'Hosted Agent' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+          bundler-cache: true
+
+      - name: Setup fastlane
+        run: |
+          gem install bundler:2.2.16
+          bundle install --jobs 4 --retry 3 
+
+      - name: Unlock keychain
+        run: |
+          security unlock-keychain -p ${{ secrets.KEYCHAIN_PASSWORD }} xcode.keychain
+
+      - name: Fastlane ios release
+        env:
+          FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+          FASTLANE_SESSION: ${{ secrets.FASTLANE_SESSION }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SLACK_URL: ${{ secrets.SLACK_URL }}
+        run: |
+          echo -n "${{ secrets.P12 }}" | base64 --decode --output fastlane/cert.p12
+          fastlane ios release
+
+  Clean_Workspace:
+    runs-on: [self-hosted, macos, x64]
+    timeout-minutes: 25
+    needs: Build
+    steps:
+      - name: Clean Workspace
+        run: rm -rf "${{ github.workspace }}"
