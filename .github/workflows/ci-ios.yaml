@@ -15,17 +15,16 @@ on:
     secrets:
       FIREBASE_TOKEN:
         required: true
-      FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD:
-        required: true
-      FASTLANE_SESSION:
-        required: true
-      FASTLANE_PASSWORD:
+      P12:
         required: true
       SLACK_URL:
         required: true
+
 jobs:
   Build:
     runs-on: [self-hosted, macos, x64]
+    timeout-minutes: 25
+
     steps:
       - name: Checkout Source
         uses: actions/checkout@v2
@@ -53,14 +52,11 @@ jobs:
 
       - name: Fastlane ios release
         env:
-          FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-          FASTLANE_SESSION: ${{ secrets.FASTLANE_SESSION }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           SLACK_URL: ${{ secrets.SLACK_URL }}
         run: |
           echo -n "${{ secrets.P12 }}" | base64 --decode --output fastlane/cert.p12
-          fastlane ios release
+          bundle exec fastlane ios release --env ${{ inputs.environment }}
 
   Clean_Workspace:
     runs-on: [self-hosted, macos, x64]
