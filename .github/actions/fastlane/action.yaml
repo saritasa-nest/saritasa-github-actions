@@ -1,0 +1,43 @@
+name: 'fastlane'
+description: 'Runs fastlane with target'
+inputs:
+  environment:
+    required: true
+  platform:
+    reauired: true
+  target:
+    required: true
+  P12:
+    description: "P12 cert for ios sign"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Set up ruby
+      if: ${{ runner.name == 'Hosted Agent' }}
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.0'
+        bundler-cache: true
+    - name: Setup java
+      if: ${{ inputs.platform == 'android' }}
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'adopt'
+        java-version: '11'
+    - name: Setup dependencies
+      shell: bash
+      run: |
+        gem install bundler:2.2.16
+        bundle install --jobs 4 --retry 3
+    - name: Update ci keychain for iOS
+      if: ${{ inputs.platform == 'ios' && inputs.P12 != ''}}
+      shell: bash
+      run: |
+        echo -n "${{ inputs.P12 }}" | base64 --decode --output fastlane/cert.p12
+        bundle exec fastlane ios update_keychain
+    - name: Execute fastlane target
+      shell: bash
+      run: bundle exec fastlane ${{ inputs.platform }} ${{ inputs.target }} --env ${{ inputs.environment }}
+
