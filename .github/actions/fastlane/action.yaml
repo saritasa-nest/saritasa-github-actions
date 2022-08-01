@@ -49,7 +49,7 @@ runs:
       if: ${{ inputs.platform == 'android' && inputs.RELEASE_KEYSTORE != '' }}
       shell: bash
       run: |
-        echo "${{ inputs.RELEASE_KEYSTORE }}" | base64 --decode > release.keystore
+        echo "${{ inputs.RELEASE_KEYSTORE }}" | base64 --decode > fastlane/release.keystore
         echo "RELEASE_KEYSTORE_PATH=release.keystore" >> $GITHUB_ENV
         echo "RELEASE_KEYSTORE_PASS=${{ inputs.RELEASE_KEYSTORE_PASS }}" >> $GITHUB_ENV
     - name: Execute fastlane target
