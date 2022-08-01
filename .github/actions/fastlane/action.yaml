@@ -11,6 +11,14 @@ inputs:
     description: "P12 cert for ios sign"
     required: false
     default: ""
+  RELEASE_KEYSTORE:
+    description: "RELEASE_KEYSTORE for android sign"
+    required: false
+    default: ""
+  RELEASE_KEYSTORE_PASS: 
+    description: "Password for android RELEASE_KEYSTORE"
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -37,6 +45,13 @@ runs:
       run: |
         echo -n "${{ inputs.P12 }}" | base64 --decode --output fastlane/cert.p12
         bundle exec fastlane ios update_keychain
+    - name: Provision ci keystore for Android
+      if: ${{ inputs.platform == 'android' && inputs.RELEASE_KEYSTORE != '' }}
+      shell: bash
+      run: |
+        echo "${{ inputs.RELEASE_KEYSTORE }}" | base64 --decode > release.keystore
+        echo "RELEASE_KEYSTORE_PATH=release.keystore" >> $GITHUB_ENV
+        echo "RELEASE_KEYSTORE_PASS=${{ inputs.RELEASE_KEYSTORE_PASS }}" >> $GITHUB_ENV
     - name: Execute fastlane target
       shell: bash
       run: bundle exec fastlane ${{ inputs.platform }} ${{ inputs.target }} --env ${{ inputs.environment }}
