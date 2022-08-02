@@ -2,57 +2,81 @@ name: 'fastlane'
 description: 'Runs fastlane with target'
 inputs:
   environment:
+    description: "According .env file provided in fastlane folder, usually one of [local, dev, staging, prod]"
     required: true
   platform:
+    description: "Build platform declared in Fastfile, usually one of [android, ios]"
     reauired: true
   target:
+    description: "Build target declared in Fastfile, usually one of [build, release]"
     required: true
-  P12:
-    description: "P12 cert for ios sign"
+  # Optional
+  ruby_version:
+    required: false
+    default: '3.0'
+  bundler_version:
+    description: Option for 'gem install` command
+    required: false
+    default: '2.2.16'
+  # Android
+  keystore:
+    description: "keystore for android sign"
     required: false
     default: ""
-  RELEASE_KEYSTORE:
-    description: "RELEASE_KEYSTORE for android sign"
+  keystore_pass: 
+    description: "Password for android keystore"
     required: false
     default: ""
-  RELEASE_KEYSTORE_PASS: 
-    description: "Password for android RELEASE_KEYSTORE"
+  java_distribution:
+    description: Option of action/setup-java@v2
+    required: false
+    default: 'adopt'
+  java_version:
+    description: Option of action/setup-java@v2
+    required: false
+    default: '11'
+  # iOS
+  certificate:
+    description: "Certificate for ios sign"
     required: false
     default: ""
 runs:
   using: "composite"
   steps:
-    - name: Set up ruby
+    - name: Setup ruby
       if: ${{ runner.name == 'Hosted Agent' }}
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.0'
+        ruby-version: ${{ inputs.ruby_version }}
         bundler-cache: true
     - name: Setup java
       if: ${{ inputs.platform == 'android' }}
       uses: actions/setup-java@v2
       with:
-        distribution: 'adopt'
-        java-version: '11'
+        distribution: ${{ inputs.java_distribution }}
+        java-version: ${{ inputs.java_version }}
     - name: Setup dependencies
+      # Setup dependencies for fastlane package from Gemfile
       shell: bash
       run: |
-        gem install bundler:2.2.16
+        gem install bundler:${{ inputs.bundler_version }}
         bundle install --jobs 4 --retry 3
     - name: Update ci keychain for iOS
-      if: ${{ inputs.platform == 'ios' && inputs.P12 != ''}}
+      # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
+      if: ${{ inputs.platform == 'ios' && inputs.certificate != ''}}
       shell: bash
       run: |
-        echo -n "${{ inputs.P12 }}" | base64 --decode --output fastlane/cert.p12
+        echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.certificate
         bundle exec fastlane ios update_keychain
     - name: Provision ci keystore for Android
-      if: ${{ inputs.platform == 'android' && inputs.RELEASE_KEYSTORE != '' }}
+      # "Provision keystore for sign from github secret and replace env vars with new values, see more: https://developer.android.com/training/articles/keystore"
+      if: ${{ inputs.platform == 'android' && inputs.keystore != '' }}
       shell: bash
       run: |
-        echo "${{ inputs.RELEASE_KEYSTORE }}" | base64 --decode > fastlane/release.keystore
+        echo "${{ inputs.keystore }}" | base64 --decode > fastlane/release.keystore
         echo "RELEASE_KEYSTORE_PATH=release.keystore" >> $GITHUB_ENV
-        echo "RELEASE_KEYSTORE_PASS=${{ inputs.RELEASE_KEYSTORE_PASS }}" >> $GITHUB_ENV
+        echo "RELEASE_KEYSTORE_PASS=${{ inputs.keystore_pass }}" >> $GITHUB_ENV
     - name: Execute fastlane target
+      # Execute lane from Fastfile
       shell: bash
       run: bundle exec fastlane ${{ inputs.platform }} ${{ inputs.target }} --env ${{ inputs.environment }}
-
