@@ -41,7 +41,7 @@ runs:
       if: ${{ inputs.certificate != ''}}
       shell: bash
       run: |
-        echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.certificate
+        echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.p12
         bundle exec fastlane ios update_keychain
     # Execute lane from Fastfile
     - name: Execute fastlane target
