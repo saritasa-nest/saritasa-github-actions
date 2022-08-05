@@ -1,12 +1,9 @@
-name: 'fastlane'
-description: 'Runs fastlane with target'
+name: 'fastlane-android'
+description: 'Runs fastlane ci for android platform'
 inputs:
   environment:
     description: "According .env file provided in fastlane folder, usually one of [local, dev, staging, prod]"
     required: true
-  platform:
-    description: "Build platform declared in Fastfile, usually one of [android, ios]"
-    reauired: true
   target:
     description: "Build target declared in Fastfile, usually one of [build, release]"
     required: true
@@ -35,22 +32,17 @@ inputs:
     description: Option of action/setup-java@v2
     required: false
     default: '11'
-  # iOS
-  certificate:
-    description: "Certificate for ios sign"
-    required: false
-    default: ""
 runs:
   using: "composite"
   steps:
     - name: Setup ruby
+      # Step fails on self-hosted macjenkins
       if: ${{ runner.name == 'Hosted Agent' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
         bundler-cache: true
     - name: Setup java
-      if: ${{ inputs.platform == 'android' }}
       uses: actions/setup-java@v2
       with:
         distribution: ${{ inputs.java_distribution }}
@@ -61,16 +53,9 @@ runs:
       run: |
         gem install bundler:${{ inputs.bundler_version }}
         bundle install --jobs 4 --retry 3
-    - name: Update ci keychain for iOS
-      # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
-      if: ${{ inputs.platform == 'ios' && inputs.certificate != ''}}
-      shell: bash
-      run: |
-        echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.certificate
-        bundle exec fastlane ios update_keychain
     - name: Provision ci keystore for Android
       # "Provision keystore for sign from github secret and replace env vars with new values, see more: https://developer.android.com/training/articles/keystore"
-      if: ${{ inputs.platform == 'android' && inputs.keystore != '' }}
+      if: ${{ inputs.keystore != '' }}
       shell: bash
       run: |
         echo "${{ inputs.keystore }}" | base64 --decode > fastlane/release.keystore
@@ -79,4 +64,4 @@ runs:
     - name: Execute fastlane target
       # Execute lane from Fastfile
       shell: bash
-      run: bundle exec fastlane ${{ inputs.platform }} ${{ inputs.target }} --env ${{ inputs.environment }}
+      run: bundle exec fastlane android ${{ inputs.target }} --env ${{ inputs.environment }}
