@@ -35,8 +35,8 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Setup ruby on github hosted machines, step fails on self-hosted macjenkins
     - name: Setup ruby
-      # Step fails on self-hosted macjenkins
       if: ${{ runner.name == 'Hosted Agent' }}
       uses: ruby/setup-ruby@v1
       with:
@@ -47,21 +47,21 @@ runs:
       with:
         distribution: ${{ inputs.java_distribution }}
         java-version: ${{ inputs.java_version }}
+    # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
-      # Setup dependencies for fastlane package from Gemfile
       shell: bash
       run: |
         gem install bundler:${{ inputs.bundler_version }}
         bundle install --jobs 4 --retry 3
+    # "Provision keystore for sign from github secret and replace env vars with new values, see more: https://developer.android.com/training/articles/keystore"
     - name: Provision ci keystore for Android
-      # "Provision keystore for sign from github secret and replace env vars with new values, see more: https://developer.android.com/training/articles/keystore"
       if: ${{ inputs.keystore != '' }}
       shell: bash
       run: |
         echo "${{ inputs.keystore }}" | base64 --decode > fastlane/release.keystore
         echo "RELEASE_KEYSTORE_PATH=release.keystore" >> $GITHUB_ENV
         echo "RELEASE_KEYSTORE_PASS=${{ inputs.keystore_pass }}" >> $GITHUB_ENV
+    # Execute lane from Fastfile
     - name: Execute fastlane target
-      # Execute lane from Fastfile
       shell: bash
       run: bundle exec fastlane android ${{ inputs.target }} --env ${{ inputs.environment }}

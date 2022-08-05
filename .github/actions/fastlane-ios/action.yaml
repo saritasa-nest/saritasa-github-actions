@@ -23,27 +23,27 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Setup ruby on github hosted machines, step fails on self-hosted macjenkins
     - name: Setup ruby
-      # Step fails on self-hosted macjenkins
       if: ${{ runner.name == 'Hosted Agent' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
         bundler-cache: true
+    # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
-      # Setup dependencies for fastlane package from Gemfile
       shell: bash
       run: |
         gem install bundler:${{ inputs.bundler_version }}
         bundle install --jobs 4 --retry 3
+    # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
     - name: Update ci keychain for iOS
-      # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
       if: ${{ inputs.certificate != ''}}
       shell: bash
       run: |
         echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.certificate
         bundle exec fastlane ios update_keychain
+    # Execute lane from Fastfile
     - name: Execute fastlane target
-      # Execute lane from Fastfile
       shell: bash
       run: bundle exec fastlane ios ${{ inputs.target }} --env ${{ inputs.environment }}
