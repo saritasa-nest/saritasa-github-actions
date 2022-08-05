@@ -1,0 +1,67 @@
+name: 'fastlane-android'
+description: 'Runs fastlane ci for android platform'
+inputs:
+  environment:
+    description: "According .env file provided in fastlane folder, usually one of [local, dev, staging, prod]"
+    required: true
+  target:
+    description: "Build target declared in Fastfile, usually one of [build, release]"
+    required: true
+  # Optional
+  ruby_version:
+    required: false
+    default: '3.0'
+  bundler_version:
+    description: Option for 'gem install` command
+    required: false
+    default: '2.2.16'
+  # Android
+  keystore:
+    description: "keystore for android sign"
+    required: false
+    default: ""
+  keystore_pass: 
+    description: "Password for android keystore"
+    required: false
+    default: ""
+  java_distribution:
+    description: Option of action/setup-java@v2
+    required: false
+    default: 'adopt'
+  java_version:
+    description: Option of action/setup-java@v2
+    required: false
+    default: '11'
+runs:
+  using: "composite"
+  steps:
+    # Setup ruby on github hosted machines, step fails on self-hosted macjenkins
+    - name: Setup ruby
+      if: ${{ runner.name == 'Hosted Agent' }}
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ inputs.ruby_version }}
+        bundler-cache: true
+    - name: Setup java
+      uses: actions/setup-java@v2
+      with:
+        distribution: ${{ inputs.java_distribution }}
+        java-version: ${{ inputs.java_version }}
+    # Setup dependencies for fastlane package from Gemfile
+    - name: Setup dependencies
+      shell: bash
+      run: |
+        gem install bundler:${{ inputs.bundler_version }}
+        bundle install --jobs 4 --retry 3
+    # "Provision keystore for sign from github secret and replace env vars with new values, see more: https://developer.android.com/training/articles/keystore"
+    - name: Provision ci keystore for Android
+      if: ${{ inputs.keystore != '' }}
+      shell: bash
+      run: |
+        echo "${{ inputs.keystore }}" | base64 --decode > fastlane/release.keystore
+        echo "RELEASE_KEYSTORE_PATH=release.keystore" >> $GITHUB_ENV
+        echo "RELEASE_KEYSTORE_PASS=${{ inputs.keystore_pass }}" >> $GITHUB_ENV
+    # Execute lane from Fastfile
+    - name: Execute fastlane target
+      shell: bash
+      run: bundle exec fastlane android ${{ inputs.target }} --env ${{ inputs.environment }}
