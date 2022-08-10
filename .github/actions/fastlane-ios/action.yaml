@@ -20,6 +20,18 @@ inputs:
     description: "Certificate for ios sign"
     required: false
     default: ""
+  appstore_key:
+    description: "Appstore connect key for uploading to testflight/appstore"
+    required: false
+    default: ''
+  appstore_key_id:
+    description: "Appstore connect key id for uploading to testflight/appstore"
+    required: false
+    default: ''
+  appstore_key_issuer:
+    description: "Appstore connect key issue for uploading to testflight/appstore"
+    required: false
+    default: ''
 runs:
   using: "composite"
   steps:
@@ -43,6 +55,17 @@ runs:
       run: |
         echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.p12
         bundle exec fastlane ios update_keychain
+    # "Provides appstore connect api key, see more: https://appstoreconnect.apple.com/access/api"
+    - name: Provide appstore key
+      if: ${{ inputs.appstore_key != ''}}
+      shell: bash
+      run: |
+        [[ "${{ inputs.appstore_key_id }}" ]] || { echo "appstore_key_id input is empty" ; exit 1; }
+        [[ "${{ inputs.appstore_key_issuer }}" ]] || { echo "appstore_key_issuer input is empty" ; exit 1; }
+        echo -n "${{ inputs.appstore_key }}" > fastlane/AuthKey.p8
+        echo "APP_STORE_CONNECT_API_KEY_KEY_FILEPATH=fastlane/AuthKey.p8" >> $GITHUB_ENV
+        echo "APP_STORE_CONNECT_API_KEY_KEY_ID={{ inputs.appstore_key_id }}" >> $GITHUB_ENV
+        echo "APP_STORE_CONNECT_API_KEY_ISSUER_ID={{ inputs.appstore_key_issuer }}" >> $GITHUB_ENV
     # Execute lane from Fastfile
     - name: Execute fastlane target
       shell: bash
