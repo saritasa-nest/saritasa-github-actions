@@ -64,8 +64,8 @@ runs:
         [[ "${{ inputs.appstore_key_issuer }}" ]] || { echo "appstore_key_issuer input is empty" ; exit 1; }
         echo -n "${{ inputs.appstore_key }}" > fastlane/AuthKey.p8
         echo "APP_STORE_CONNECT_API_KEY_KEY_FILEPATH=fastlane/AuthKey.p8" >> $GITHUB_ENV
-        echo "APP_STORE_CONNECT_API_KEY_KEY_ID={{ inputs.appstore_key_id }}" >> $GITHUB_ENV
-        echo "APP_STORE_CONNECT_API_KEY_ISSUER_ID={{ inputs.appstore_key_issuer }}" >> $GITHUB_ENV
+        echo "APP_STORE_CONNECT_API_KEY_KEY_ID=${{ inputs.appstore_key_id }}" >> $GITHUB_ENV
+        echo "APP_STORE_CONNECT_API_KEY_ISSUER_ID=${{ inputs.appstore_key_issuer }}" >> $GITHUB_ENV
     # Execute lane from Fastfile
     - name: Execute fastlane target
       shell: bash
