@@ -70,3 +70,7 @@ runs:
     - name: Execute fastlane target
       shell: bash
       run: bundle exec fastlane ios ${{ inputs.target }} --env ${{ inputs.environment }}
+    # Remove sensitive data
+    - name: Action cleanup
+      shell: bash
+      run: rm fastlane/*.p8 || true; rm fastlane/*.p12 || true
