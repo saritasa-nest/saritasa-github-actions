@@ -16,11 +16,15 @@ inputs:
     required: false
     default: '2.2.16'
   # Android
+  google_services_json:
+    description: google-services.json file content
+    required: false
+    default: ''
   keystore:
     description: "keystore for android sign"
     required: false
     default: ""
-  keystore_pass: 
+  keystore_pass:
     description: "Password for android keystore"
     required: false
     default: ""
@@ -61,6 +65,11 @@ runs:
         echo "${{ inputs.keystore }}" | base64 --decode > fastlane/release.keystore
         echo "RELEASE_KEYSTORE_PATH=release.keystore" >> $GITHUB_ENV
         echo "RELEASE_KEYSTORE_PASS=${{ inputs.keystore_pass }}" >> $GITHUB_ENV
+    - name: Provision goolge-services.json
+      if: ${{ inputs.google_services_json != '' }}
+      shell: bash
+      run: |
+        echo "${{ inputs.google_services_json }} > fastlane/google-services.json"
     # Execute lane from Fastfile
     - name: Execute fastlane target
       shell: bash
