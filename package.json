@@ -1,5 +1,5 @@
 {
-  "name": "saritasa-git-version",
+  "name": "saritasa-github-actions",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,15 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AntonZiminSaritasa/saritasa-git-version.git"
+    "url": "git+https://github.com/saritasa-nest/saritasa-github-actions.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Saritasa",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/AntonZiminSaritasa/saritasa-git-version/issues"
+    "url": "https://github.com/saritasa-nest/saritasa-github-actions/issues"
   },
-  "homepage": "https://github.com/AntonZiminSaritasa/saritasa-git-version#readme",
+  "homepage": "https://github.com/saritasa-nest/saritasa-github-actions#readme",
   "dependencies": {
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.1.1",
