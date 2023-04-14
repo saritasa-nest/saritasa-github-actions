@@ -1,0 +1,27 @@
+{
+  "name": "saritasa-git-version",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AntonZiminSaritasa/saritasa-git-version.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AntonZiminSaritasa/saritasa-git-version/issues"
+  },
+  "homepage": "https://github.com/AntonZiminSaritasa/saritasa-git-version#readme",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1",
+    "glob": "^7.2.3",
+    "shelljs": "^0.8.5",
+    "xml2js": "^0.5.0"
+  }
+}

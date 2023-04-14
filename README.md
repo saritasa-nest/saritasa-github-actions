@@ -1,2 +1,3 @@
-# saritasa-github-actions
-GitHub actions
+# Saritasa GitHub Actions
+
+- [generate-version](generate-version/README.md)

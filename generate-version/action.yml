@@ -1,0 +1,25 @@
+name: 'Saritasa Git Version'
+description: 'Generates SemVer by Git branch or tag.'
+inputs:
+  main-branch-name:
+    description: 'The name of the main branch.'
+    required: true
+    default: 'main'
+  update-dotnet-project-files:
+    description: 'True to update version in .csproj files.'
+    required: true
+    default: 'false'
+  dotnet-projects:
+    description: 'Glob pattern for .csproj files.'
+    required: true
+    default: '**/*.csproj'
+outputs:
+  informational-version:
+    description: '1.3.0-beta.12+release/1.3.0.56793f7f6259dd4042d57e9d206cb9b1d8434508'
+  semver:
+    description: '1.3.0'
+  assembly-semver:
+    description: '1.3.0.0'
+runs:
+  using: 'node16'
+  main: 'index.js'
