@@ -1,5 +1,12 @@
 name: 'semver'
 description: 'Provides sevmer output for current git repo'
+inputs:
+  debug:
+    required: false
+    default: false
+  file:
+    required: false
+    default: ''
 outputs:
   version:
     description: Json based string with version values
@@ -7,6 +14,19 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: version
-      run: echo "json=$(${{ github.action_path }}/bin/semver)" >> $GITHUB_OUTPUT
+    - id: debug
       shell: bash
+      if: inputs.debug
+      run: |
+        echo "VERSIONING_DEBUG=true" >> "$GITHUB_ENV"
+    - id: version
+      shell: bash
+      run: |
+        echo "json=$(${{ github.action_path }}/bin/semver)" >> $GITHUB_OUTPUT
+    - id: file
+      shell: bash
+      if: inputs.file != ''
+      run: |
+        echo "${{steps.version.outputs.json}}" >> ${{inputs.file}}
+
+      
