@@ -1,7 +1,12 @@
 name: 'semver'
 description: 'Provides sevmer output for current git repo'
+outputs:
+  version:
+    description: Json based string with version values
+    value: ${{ steps.version.outputs.json}}
 runs:
   using: "composite"
   steps:
-    - run: ${{ github.action_path }}/bin/semver
+    - id: version
+      run: echo "json=$(${{ github.action_path }}/bin/semver)" >> $GITHUB_OUTPUT
       shell: bash
