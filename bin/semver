@@ -1,0 +1,397 @@
+#!/usr/bin/env bash
+
+# Application provides json based output with semver for target git repo
+# It uses branch or tag for fetching MajorMinorPatch (MMP) and processing it with logic based on current branch
+# See more in readme: https://github.com/saritasa-nest/saritasa-devops-docker-images/blob/6d1274f24a18f9c24ca7a950da24a246d8bb6c87/public/git-version/README.md
+
+set -Eeuo pipefail
+shopt -s extglob 
+
+# Helpers functions
+## Use VERSIONING_DEBUG=1 env var for verbose output
+if [[ -z "${VERSIONING_DEBUG:-}" ]]; then
+	pecho() { :; }
+else
+	pecho() {
+		>&2 echo "$LOG_PREFIX $1"
+	}
+fi
+pexit() {	
+	>&2 echo "$LOG_PREFIX $1"
+	exit 1
+}
+
+#######################################
+# Converts array to string with delimiter
+# More here: https://www.baeldung.com/linux/ifs-shell-variable#3-ifs-and-positional-parameters
+# Globals:
+#	None
+# Arguments:
+#	Separator
+#	Array of strings
+# Output:
+#	A new string by joining all the elements of an iterable, separated by the given separator.
+join_by() { 
+	local IFS="$1" 
+	shift 
+	echo "$*" 
+}
+
+# -----------------------------------------------------
+## REGEX for matching for MajorMinorPatch (MMP) from tag
+## Proceed result to BASH_REMATCH: https://www.bashsupport.com/bash/variables/bash/bash_rematch/
+MMP_TAG_REGEX="v?([0-9]+.[0-9]+.[0-9]+)"
+
+## Default value for MajorMinorPatch (MMP) when it can't be got from tag/branch name
+MMP_UNKNOWN=${MMP_UNKNOWN:-"0.0.0"}
+
+## Prefix for log output
+LOG_PREFIX="main: "
+
+## current commit HASH, like 'b88c59d6f842a30421bf0f85fb173ff061973733'
+COMMIT_HASH=
+
+## Recognised branch/tag description, like 'Main branch'
+DESCRIPTION=
+
+## Recognised branch/tag suffix, like '-dev'
+SUFFIX=
+
+## parsed and/or calculated natural number for current commit MAJOR version
+MAJOR=
+
+## parsed and/or calculated natural number for current commit MINOR version
+MINOR=
+
+## parsed and/or calculated natural number for current commit PATCH version
+PATCH=
+
+## parsed and/or calculated natural number for current commit weight version
+BUILD=
+
+## parsed and/or calculated MAJOR.MINOR.PATCH version for current commit, like '1.2.3'
+MMP= 
+
+## calculated SEMVER or MAJOR.MINOR.PATCH-SUFFIX.BUILD version for current commit, like '1.2.3-dev.4'
+SEMVER=
+
+## calculated ASSEMLY_SEMVER or MAJOR.MINOR.PATCH.BUILD version for current commit, like '1.2.3.4'
+ASSEMBLY_SEMVER=
+
+## calculated INFORM_SEMVER or MAJOR.MINOR.PATCH-SUFFIX.BUILD+COMMIT version for current commit, like '1.2.3-dev.4+b88c59d6f842a30421bf0f85fb173ff061973733
+INFORM_VERSION=
+
+## template for app output with calculated values
+## Example
+## {
+##  "Major": "1",
+##  "Minor": "2",
+##  "Patch": "3",
+##  "MajorMinorPatch": "1.2.3",
+##  "SemVer": "1.2.3-dev.4",
+##  "AssemblySemVer": "1.2.3.4",
+##  "InformationalVersion": "1.2.3-dev.4+b88c59d6f842a30421bf0f85fb173ff061973733",
+##  "Sha": "b88c59d6f842a30421bf0f85fb173ff061973733"
+##}
+JSON_TEMPLATE=$(cat <<EOF
+{
+	"Major":"#MAJOR",
+	"Minor":"#MINOR",
+	"Patch":"#PATCH",
+	"MajorMinorPatch":"#MMP",
+	"SemVer":"#SEMVER",
+	"AssemblySemVer":"#ASSEMBLY_SEMVER",
+	"InformationalVersion":"#INFORM_VERSION",
+	"Sha":"#COMMIT_HASH"
+}
+EOF
+)
+
+#######################################
+# Get main branch name in current git repo
+# Globals:
+#	None
+# Arguments:
+#	None
+# Output:
+#	Branch name
+_get_main_branch_name(){
+	git branch -r --format='%(refname:short)' | grep "main\|master" -m1 | xargs
+}
+
+#######################################
+# Get branch name in current git repo
+# Globals:
+#	None
+# Arguments:
+#	None
+# Output:
+#	Branch name
+_get_branch_name(){
+	git rev-parse --abbrev-ref HEAD
+}
+
+#######################################
+# Get commit count (weight) for current branch from first parent
+# Globals:
+#	None
+# Arguments:
+#	None
+# Output:
+#	Commit weight as natural number
+_get_commit_weigh(){
+	git rev-list --count HEAD --no-merges --first-parent
+}
+
+
+#######################################
+# Filling MMP_TAG value according last tag in target branch
+# Globals:
+#	MMP_TAG
+#	MMP_TAG_REGEX
+# Arguments:
+#	Branch name
+get_MMP_TAG(){
+	local LOG_PREFIX="get_MMP_TAG: "
+	local BRANCH=${1:-HEAD}
+	local TAG
+	if [[ $BRANCH =~ main|master ]]; then
+		pecho "Processing \"$BRANCH\" as main branch"
+		TAG="$(git describe --tags $(git rev-list --tags --max-count=1 --branches="$BRANCH" --quiet) 2>/dev/null || echo "")"
+	else
+		pecho "Processing \"$BRANCH\" as non-main branch"
+		TAG=$(git describe --tags --exact-match "$BRANCH" 2>/dev/null || echo "")
+	fi
+
+	if [[ -z $TAG ]]; then
+		pecho "Error to fetch MMP_TAG for $BRANCH: no tag found"
+		return 1
+	fi
+
+	if [[ ! $TAG =~ $MMP_TAG_REGEX ]]; then
+		pecho "Error to fetch MMP_TAG for $BRANCH ['$TAG']: wrong format. Expected '[v]x.x.x'"
+		return 1
+	fi
+
+	MMP_TAG=${BASH_REMATCH[1]}
+	pecho "Found tag $MMP_TAG for $BRANCH"
+}
+
+#######################################
+# Filling semver global env vars for main branch
+# Globals:
+#	MMP_TAG
+#	DESCRIPTION
+#	MMP
+#	BUILD
+# Arguments:
+#	None
+get_version_for_main(){
+	local LOG_PREFIX="get_version_for_main: "
+	local BRANCH=$(_get_main_branch_name)
+	if ! get_MMP_TAG $BRANCH ; then
+		pexit "Production releases without tag are no allowed"
+	fi
+	DESCRIPTION="Main branch"
+	MMP=$MMP_TAG
+	# BUILD for main branches always 0
+	BUILD="0"
+}
+
+#######################################
+# Filling semver global env vars for detached HEAD
+# Globals:
+#	MMP_TAG
+#	DESCRIPTION
+#	MMP
+#	BUILD
+# Arguments:
+#	None
+get_version_for_head(){
+	if ! get_MMP_TAG; then
+		pexit "Detached HEAD without tag detected. Use specific ref for versioning"
+	else
+		git branch -r --format='%(refname:short)' --contains tags/$MMP_TAG | grep "main\|master"
+		if [[ $? -ne 0 ]]; then
+			pexit "Tag $MMP_TAG does not belong to main branch."
+		else
+			DESCRIPTION="Main branch"
+			MMP=$MMP_TAG
+			# ignoring commit_weight for main branches
+			BUILD="0"
+		fi
+	fi
+}
+
+#######################################
+# Filling semver global env vars for release branch
+# Globals:
+#	MMP_TAG
+#	DESCRIPTION
+#	MMP
+#	BUILD
+# Arguments:
+#	None
+get_version_for_release(){
+	local LOG_PREFIX="get_version_for_release: "
+	local BRANCH=$(_get_branch_name)
+	if [[ ! $BRANCH =~ ^release/([0-9]+.[0-9]+.[0-9]+) ]]; then
+		pexit "Wrong release name. Expected SEMVER: release/x.x.x"
+	fi
+	DESCRIPTION="Release branch"
+	SUFFIX="-beta"
+	MMP=${BASH_REMATCH[1]}
+	BUILD=$(_get_commit_weigh)
+}
+
+#######################################
+# Filling semver global env vars for hotfix branch
+# Globals:
+#	MMP_TAG
+#	MMP_UNKNOWN
+#	DESCRIPTION
+#	MMP
+#	BUILD
+# Arguments:
+#	None
+get_version_for_hotfix(){
+	local LOG_PREFIX="get_version_for_hotfix: "
+	local MAIN_BRANCH=$(_get_main_branch_name)
+	local BRANCH=$(_get_branch_name)
+	local MMP_ARRAY
+	if ! get_MMP_TAG $MAIN_BRANCH; then
+		pecho "No tag found for branch '$MAIN_BRANCH'. Falling to $MMP_UNKNOWN"
+		MMP_TAG="$MMP_UNKNOWN"
+	fi
+	# split MMP_TAG to MMP_ARRAY by '.'
+	IFS='.' read -ra MMP_ARRAY <<< "$MMP_TAG"
+	((MMP_array[2]++))
+	MMP=$(join_by . "${MMP_array[@]}")
+	BUILD=$(_get_commit_weigh)
+
+	if [[ $BRANCH =~ ^hotfix/(.*)$ ]]; then
+		SUFFIX="-${BASH_REMATCH[1]}"
+		DESCRIPTION="Hotfix branch"
+	else
+		SUFFIX="-unknown"
+		DESCRIPTION="Unknown branch"
+	fi
+}
+
+#######################################
+# Filling semver global env vars for development branches
+# Globals:
+#	MMP_TAG
+#	MMP_UNKNOWN
+#	DESCRIPTION
+#	MMP
+#	BUILD
+# Arguments:
+#	None
+get_version_for_development(){
+	local LOG_PREFIX="get_version_for_develop: "
+	local MAIN_BRANCH=$(_get_main_branch_name)
+	local BRANCH=$(_get_branch_name)
+	local MMP_ARRAY
+	if ! get_MMP_TAG $BRANCH; then 
+		pecho "No tag found for $BRANCH. Falling to $MAIN_BRANCH"
+		if ! get_MMP_TAG $MAIN_BRANCH; then
+			pecho "No tag found for $MAIN_BRANCH. Falling to $MMP_UNKNOWN"
+			MMP_TAG="$MMP_UNKNOWN"
+		fi
+	fi
+	# split MMP_TAG to MMP_ARRAY by '.'
+	IFS='.' read -ra MMP_ARRAY <<< "$MMP_TAG"
+	(( MMP_ARRAY[1]=MMP_ARRAY[1]+1 ))
+	MMP_ARRAY[2]=0 
+	MMP=$(join_by . "${MMP_ARRAY[@]}")
+	BUILD=$(_get_commit_weigh)
+
+	if [[ $BRANCH == develop ]]; then
+		DESCRIPTION="Develop branch"
+		SUFFIX="-dev"
+	elif [[ $BRANCH =~ ^feature/(.*)$ ]]; then
+		DESCRIPTION="Feature branch"
+		SUFFIX="-${BASH_REMATCH[1]}"
+	else
+		DESCRIPTION="Unknown branch"
+		SUFFIX="-unknown"
+	fi
+}
+
+#######################################
+# Prints help when script used with -h|--help option
+# Globals:
+#	None
+# Arguments:
+#	None
+usage() {
+	cat <<-EOF 
+	Usage: $(basename "${BASH_SOURCE[0]}") [-h]
+
+	Script provides application version info for project using git branches and tags in json format
+
+	Available options:
+	-h, --help      Print this help and exit
+
+	Env vars:
+	VERSIONING_DEBUG		Increase app output verbose
+	MMP_UNKNOWN			Default semver for unrecognized branch/tag
+
+	EOF
+	exit
+}
+
+#######################################
+# Main function: calculate semver vars for current repo 
+# Globals:
+#	MAJOR
+#	MINOR
+#	PATCH
+#	COMMIT_HASH
+#	SUFFIX
+#	SEMVER
+#	ASSEMBLY_SEMVER
+#	INFORM_VERSION
+#	JSON_TEMPLATE
+# Arguments:
+#	Command option
+if [[ $# -eq 0 ]]; then
+	# shellcheck disable=SC2155
+	BRANCH=$(_get_branch_name)
+
+	# --------------------------------------------
+	# calculating MMP, SUFFIX, BUILD according matched branch name
+	pecho "Getting version for $BRANCH"
+	if [[ $BRANCH =~ main|master ]]; then
+		get_version_for_main
+	elif [[ $BRANCH == HEAD ]]; then
+		get_version_for_head
+	elif [[ $BRANCH =~ ^release.* ]]; then
+		get_version_for_release
+	elif [[ $BRANCH =~ ^hotfix.* ]]; then
+		get_version_for_hotfix
+	else 
+		get_version_for_development
+	fi
+
+	# --------------------------------------------
+	# calculating other global vars
+	MMP_ARRAY=
+	# split MMP to MMP_ARRAY by '.'
+	IFS='.' read -ra MMP_ARRAY <<< "$MMP"
+	MAJOR="${MMP_ARRAY[0]}"
+	MINOR="${MMP_ARRAY[1]}"
+	PATCH="${MMP_ARRAY[2]}"
+	COMMIT_HASH=$(git rev-parse HEAD)
+	SUFFIX=${SUFFIX}.${BUILD}
+	SEMVER=${MMP}${SUFFIX}
+	ASSEMBLY_SEMVER=${MMP}.${BUILD}
+	INFORM_VERSION=$(echo "${MMP}${SUFFIX}+${COMMIT_HASH}" | sed "s/\//-/g")
+	export MAJOR MINOR PATCH MMP ASSEMBLY_SEMVER INFORM_VERSION SEMVER COMMIT_HASH
+	echo $JSON_TEMPLATE | sed -e 's/#/$/g' | envsubst
+elif [[ $1 =~ --help|-h ]]; then
+	usage >&2
+else
+	pexit "WARNING: unknown options $*, use --help" >&2
+fi
