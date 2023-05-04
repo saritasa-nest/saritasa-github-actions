@@ -1,0 +1,7 @@
+name: 'semver'
+description: 'Provides sevmer output for current git repo'
+runs:
+  using: "composite"
+  steps:
+    - run: ${{ github.action_path }}/bin/semver
+      shell: bash
