@@ -85,7 +85,7 @@ jobs:
         run: .\rattus-windows-amd64.exe > ${{ env.BUILD_PATH }}/Web.Debug.config
       
       - name: Build app for release
-        run: msbuild ${{ env.BUILD_PATH }}/${{ env.CSPROJ_FILE }} /p:Configuration=Debug /p:Platform=AnyCPU /t:WebPublish /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl=${{ env.BUILD_FOLDER }}\${{ env.APP_NAME }}-${{ env.environment }}
+        run: msbuild ${{ env.BUILD_PATH }}/${{ env.CSPROJ_FILE }} /p:Configuration=Debug /p:Platform=AnyCPU /t:WebPublish /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl=${{ env.BUILD_FOLDER }}/${{ env.APP_NAME }}-${{ env.environment }}
       
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
