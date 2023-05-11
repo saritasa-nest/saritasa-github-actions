@@ -98,30 +98,30 @@ jobs:
   # # More GitHub Actions for Azure: https://github.com/Azure/actions
   
   # Deploying an application to azure cloud
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    environment:
-      name: '${{ env.environment }}'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+  # deploy:
+  #   runs-on: windows-latest
+  #   needs: build
+  #   environment:
+  #     name: deploy
+  #     url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v2
-        with:
-          name: ASP-app
+  #   steps:
+  #     - name: Download artifact from build job
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         name: ASP-app
       
-      # slot-name should always be Production since there is only one available deployment slot
-      # A publish profile is a file that contains information and settings for deploy applications and services in Azure Cloud
-      # publish-profile is a file which is unique for each app serivce. It can be downloaded from app service's overview page on Azure portal:
-      # https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
+  #     # slot-name should always be Production since there is only one available deployment slot
+  #     # A publish profile is a file that contains information and settings for deploy applications and services in Azure Cloud
+  #     # publish-profile is a file which is unique for each app serivce. It can be downloaded from app service's overview page on Azure portal:
+  #     # https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
       
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: '${{ env.APP_NAME }}-${{ env.environment }}'
-          slot-name: 'production' # deployment slot by default for new application
-          # Get publish-profile from https://keys.saritasa.cloud/cred/detail/16857/
-          publish-profile: ${{ secrets.publish-profile }}
-          package: .
+  #     - name: Deploy to Azure Web App
+  #       id: deploy-to-webapp
+  #       uses: azure/webapps-deploy@v2
+  #       with:
+  #         app-name: '${{ env.APP_NAME }}-${{ env.environment }}'
+  #         slot-name: 'production' # deployment slot by default for new application
+  #         # Get publish-profile from https://keys.saritasa.cloud/cred/detail/16857/
+  #         publish-profile: ${{ secrets.publish-profile }}
+  #         package: .
