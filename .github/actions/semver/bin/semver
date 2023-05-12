@@ -38,6 +38,8 @@ join_by() {
 }
 
 # -----------------------------------------------------
+ALLOW_NONMAIN_HEAD=
+
 ## REGEX for matching for MajorMinorPatch (MMP) from tag
 ## Proceed result to BASH_REMATCH: https://www.bashsupport.com/bash/variables/bash/bash_rematch/
 MMP_TAG_REGEX="^v?([0-9]+\.[0-9]+\.[0-9]+)$"
@@ -209,14 +211,18 @@ get_version_for_main(){
 # Arguments:
 #	None
 get_version_for_head(){
+	local BRANCH
 	if ! get_MMP_TAG; then
 		pexit "Detached HEAD without tag detected. Use specific ref for versioning"
 	else
-		git branch -r --format='%(refname:short)' --contains tags/$MMP_TAG | grep "main\|master"
-		if [[ $? -ne 0 ]]; then
-			pexit "Tag $MMP_TAG does not belong to main branch."
-		else
+		BRANCH=git branch -r --format='%(refname:short)' --contains tags/$MMP_TAG
+		if [[ -n $ALLOW_NONMAIN_HEAD ]]; then
+			if ! echo $BRANCH | grep "main\|master" ; then
+				pexit "Tag $MMP_TAG does not belong to main branch."
+			fi
 			DESCRIPTION="Main branch"
+		else
+			DESCRIPTION="$BRANCH branch"
 			MMP=$MMP_TAG
 			# ignoring commit_weight for main branches
 			BUILD="0"
