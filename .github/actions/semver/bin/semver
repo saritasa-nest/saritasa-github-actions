@@ -212,6 +212,7 @@ get_version_for_head(){
 	if ! get_MMP_TAG; then
 		pexit "Detached HEAD without tag detected. Use specific ref for versioning"
 	else
+		git fetch --all
 		git branch -r --format='%(refname:short)' --contains tags/$MMP_TAG | grep "main\|master"
 		if [[ $? -ne 0 ]]; then
 			pexit "Tag $MMP_TAG does not belong to main branch."
