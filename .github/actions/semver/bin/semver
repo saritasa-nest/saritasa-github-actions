@@ -157,7 +157,7 @@ get_MMP_TAG(){
 	local TAG
 	if [[ $BRANCH =~ main|master ]]; then
 		pecho "Processing \"$BRANCH\" as main branch"
-		TAG="$(git describe --tags $(git rev-list --tags --max-count=1 --branches="$BRANCH" --quiet) 2>/dev/null || echo "")"
+		TAG="$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1 --branches="$BRANCH" --quiet) 2>/dev/null || echo "")"
 	else
 		pecho "Processing \"$BRANCH\" as non-main branch"
 		TAG=$(git describe --tags --exact-match "$BRANCH" 2>/dev/null || echo "")
