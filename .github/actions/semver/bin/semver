@@ -40,7 +40,7 @@ join_by() {
 # -----------------------------------------------------
 ## REGEX for matching for MajorMinorPatch (MMP) from tag
 ## Proceed result to BASH_REMATCH: https://www.bashsupport.com/bash/variables/bash/bash_rematch/
-MMP_TAG_REGEX="v?([0-9]+\.[0-9]+\.[0-9]+)"
+MMP_TAG_REGEX="^v?([0-9]+\.[0-9]+\.[0-9]+)$"
 
 ## Default value for MajorMinorPatch (MMP) when it can't be got from tag/branch name
 MMP_UNKNOWN=${MMP_UNKNOWN:-"0.0.0"}
@@ -212,7 +212,6 @@ get_version_for_head(){
 	if ! get_MMP_TAG; then
 		pexit "Detached HEAD without tag detected. Use specific ref for versioning"
 	else
-		git fetch --all
 		git branch -r --format='%(refname:short)' --contains tags/$MMP_TAG | grep "main\|master"
 		if [[ $? -ne 0 ]]; then
 			pexit "Tag $MMP_TAG does not belong to main branch."
