@@ -23,7 +23,12 @@ runs:
       shell: bash
       run: |
         set -o pipefail
-        echo "json=$(${{ github.action_path }}/bin/semver)" >> $GITHUB_OUTPUT
+        JSON=$(${{ github.action_path }}/bin/semver)
+        if [[ -z ${JSON} ]]; then
+          exit -1
+        else
+          echo "json=${JSON}" >> $GITHUB_OUTPUT
+        fi
     - id: file
       shell: bash
       if: inputs.file != ''
