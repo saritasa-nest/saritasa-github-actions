@@ -127,7 +127,7 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: '${{ inputs.APP_NAME }}-${{ inputs.environment }}'
-          slot-name: 'production' # deployment slot by default for new application
+          slot-name: '${{ inputs.environment }}' # deployment slot by default for new application
           # Get publish-profile from https://keys.saritasa.cloud/cred/detail/16857/
           publish-profile: ${{ secrets.publish-profile }}
           package: .
