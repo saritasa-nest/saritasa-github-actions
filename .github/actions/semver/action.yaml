@@ -7,6 +7,9 @@ inputs:
   file:
     required: false
     default: ''
+  process_dotnet:
+    required: false
+    default: false
 outputs:
   version:
     description: Json based string with version values
@@ -19,16 +22,24 @@ runs:
       if: inputs.debug
       run: |
         echo "VERSIONING_DEBUG=true" >> "$GITHUB_ENV"
+    - id: set path
+      shell: bash
+      run: echo ${{ github.action_path }}/bin >> $GITHUB_PATH
     - id: version
       shell: bash
       run: |
         set -o pipefail
-        JSON=$(${{ github.action_path }}/bin/semver)
+        JSON=$(semver)
         if [[ -z ${JSON} ]]; then
           exit -1
         else
           echo "json=${JSON}" >> $GITHUB_OUTPUT
         fi
+    - id: dotnet
+      if: inputs.process_dotnet
+      shell: bash
+      run: |
+        echo "${{steps.version.outputs.json}}" | process_dotnet
     - id: file
       shell: bash
       if: inputs.file != ''
