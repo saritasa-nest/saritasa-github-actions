@@ -98,13 +98,7 @@ jobs:
      
       - name: Build app for release
         run: |
-            msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }} ^
-            /p:Configuration=Debug ^
-            /p:Platform=AnyCPU ^
-            /t:WebPublish ^
-            /p:WebPublishMethod=FileSystem ^
-            /p:DeleteExistingFiles=True ^
-            /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
+            msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }} /p:Configuration=Debug /p:Platform=AnyCPU /t:WebPublish /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
       
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
