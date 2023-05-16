@@ -40,6 +40,9 @@ on:
       runner_image:
         required: true
         type: string
+      deployment_slot:
+        required: true
+        type: string
     secrets:
       azure_client_id:
         required: true
@@ -94,7 +97,14 @@ jobs:
           TEMPLATE_PATH: ${{ inputs.template_path }}
      
       - name: Build app for release
-        run: msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }} /p:Configuration=Debug /p:Platform=AnyCPU /t:WebPublish /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
+        run: |
+            msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }} 
+            /p:Configuration=Debug 
+            /p:Platform=AnyCPU 
+            /t:WebPublish 
+            /p:WebPublishMethod=FileSystem 
+            /p:DeleteExistingFiles=True 
+            /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
       
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
@@ -130,7 +140,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: '${{ inputs.app_name }}-${{ inputs.environment }}'
-          slot-name: 'production' # deployment slot by default for new application
-          # Get publish-profile from https://keys.saritasa.cloud/cred/detail/16857/
+          slot-name: '${{ inputs.deployment_slot }}' # deployment slot by default for new application
           publish-profile: ${{ secrets.publish-profile }}
           package: .
