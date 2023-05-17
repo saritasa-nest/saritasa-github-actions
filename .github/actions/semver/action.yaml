@@ -22,7 +22,7 @@ runs:
       if: inputs.debug
       run: |
         echo "VERSIONING_DEBUG=true" >> "$GITHUB_ENV"
-    - id: set path
+    - id: set-path
       shell: bash
       run: echo ${{ github.action_path }}/bin >> $GITHUB_PATH
     - id: version
