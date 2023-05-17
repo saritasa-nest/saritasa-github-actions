@@ -35,11 +35,11 @@ runs:
         else
           echo "json=${JSON}" >> $GITHUB_OUTPUT
         fi
-    - id: dotnet
-      if: inputs.process_dotnet
-      uses: mikefarah/yq@master
-      cmd: |
-        echo "${{steps.version.outputs.json}}" | process_dotnet
+    # - id: dotnet
+    #   if: inputs.process_dotnet
+    #   uses: mikefarah/yq@master
+    #   cmd: |
+    #     echo "${{steps.version.outputs.json}}" | process_dotnet
     - id: file
       shell: bash
       if: inputs.file != ''
