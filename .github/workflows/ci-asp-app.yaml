@@ -129,8 +129,14 @@ jobs:
           TEMPLATE_PATH: ${{ inputs.template_path }}
      
       - name: Build app for release
-        run: |
-            msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }} /p:Configuration=Debug /p:Platform=AnyCPU /t:WebPublish /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
+        run: >
+          msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }}
+           /p:Configuration=Debug 
+           /p:Platform=AnyCPU 
+           /t:WebPublish 
+           /p:WebPublishMethod=FileSystem 
+           /p:DeleteExistingFiles=True 
+           /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
       
       - name: Upload artifact for deployment task
         uses: actions/upload-artifact@v2
