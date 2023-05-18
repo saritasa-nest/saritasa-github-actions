@@ -194,7 +194,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}* /n*Url*: ${{ steps.deploy-to-webapp.outputs.webapp-url }}"
+                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}* \n*Url*: ${{ steps.deploy-to-webapp.outputs.webapp-url }}"
                 }
               },
               {
