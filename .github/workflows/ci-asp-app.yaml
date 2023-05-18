@@ -14,10 +14,19 @@ name: CI-ASP
 on:
   workflow_call:
     inputs:
+      # Build configuration
       environment:
         required: true
         type: string
         description: 'Deployment environment'
+      configuration:
+        required: true
+        type: string
+        description: 'Configuration of build Debug/Release'
+      platform_identifier:
+        required: true
+        type: string
+        description: 'Platform for build'
       build_path:
         required: true
         type: string
@@ -46,14 +55,14 @@ on:
         required: true
         type: string
         description: 'The URL of the secret repository in Azure Cloud is used by rattus to generate a configuration file'
-      runner_image:
-        required: true
-        type: string
-        description: 'The image of the runner OS on which workflow is running'
       deployment_slot:
         required: true
         type: string
         description: 'Deployment slot in Azure Cloud'
+      runner_image:
+        required: true
+        type: string
+        description: 'The image of the runner OS on which workflow is running'
     # For get slack channel id use this instruction
     # https://www.wikihow.com/Find-a-Channel-ID-on-Slack-on-PC-or-Mac
       slack_channel_id:
@@ -131,8 +140,8 @@ jobs:
       - name: Build app for release
         run: >
           msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }}
-          /p:Configuration=Debug
-          /p:Platform=AnyCPU
+          /p:Configuration=${{ inputs.configuration }}
+          /p:Platform=${{ inputs.platform_identifier }}
           /t:WebPublish
           /p:WebPublishMethod=FileSystem
           /p:DeleteExistingFiles=True
