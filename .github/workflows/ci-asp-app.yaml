@@ -268,4 +268,4 @@ jobs:
     needs: Build
     steps:
       - name: Clean Workspace
-        run: rm -rf "${{ github.workspace }}"
+        run: rmdir /q /s "${{ github.workspace }}"
