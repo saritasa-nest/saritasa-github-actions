@@ -261,11 +261,3 @@ jobs:
                 "type": "divider"
               }
             ]
-
-  Clean_Workspace:
-    runs-on: ${{ inputs.runner_image }}
-    timeout-minutes: 25
-    needs: Build
-    steps:
-      - name: Clean Workspace
-        run: rmdir /q /s "${{ github.workspace }}"
