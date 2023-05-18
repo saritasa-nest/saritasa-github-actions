@@ -5,6 +5,7 @@ name: CI-ASP
 # CI Pipeline for building ASP app and deplyoing it to Azure App Service
 # - get config file via Rattus https://github.com/Saritasa/rattus
 # - deploy to Azure App Service
+# - notifies of success/failure to slack channel
 # 
 # Original Author: Rostislav Udaltsov
 # Created: 05/11/2023
@@ -16,42 +17,76 @@ on:
       environment:
         required: true
         type: string
-      BUILD_PATH:
+        description: 'Deployment environment'
+      build_path:
         required: true
         type: string
-      TEMPLATE_PATH:
+        description: 'Path to the application build directory'
+      template_path:
         required: true
         type: string
-      BUILD_FOLDER:
+        description: 'The path to the configuration file template used by the rattus to generate the configuration file'
+      build_folder:
         required: true
         type: string
-      PATH_TO_SOLVE_FILE:
+        description: 'The name of the folder where the application is going to'
+      path_to_solve_file:
         required: true
         type: string
-      CSPROJ_FILE:
+        description: 'Path to the dependency file'
+      csproj_file:
         required: true
         type: string
-      APP_NAME:
+        description: 'The path to the application build file'
+      app_name:
         required: true
         type: string
-      AZURE_VAULT:
+        description: 'Name of the application being built'
+      azure_vault:
         required: true
         type: string
+        description: 'The URL of the secret repository in Azure Cloud is used by rattus to generate a configuration file'
+      runner_image:
+        required: true
+        type: string
+        description: 'The image of the runner OS on which workflow is running'
+      deployment_slot:
+        required: true
+        type: string
+        description: 'Deployment slot in Azure Cloud'
+    # For get slack channel id use this instruction
+    # https://www.wikihow.com/Find-a-Channel-ID-on-Slack-on-PC-or-Mac
+      slack_channel_id:
+        required: true
+        type: string
+        description: 'ID of the slack channel for sending notifications about the progress of the workflow'
+
+    # For get credentials for Azure Cloud use this instruction
+    # https://learn.microsoft.com/en-us/dotnet/architecture/devops-for-aspnet-developers/actions-deploy
+    # For get publish-profile use this instruction
+    # https://learn.microsoft.com/en-us/visualstudio/azure/how-to-get-publish-profile-from-azure-app-service?view=vs-2022&viewFallbackFrom=vs-2017
     secrets:
-      AZURE_CLIENT_ID:
+      azure_client_id:
         required: true
-      AZURE_CLIENT_SECRET:
+        description: 'Client id for authorization in Azure Cloud, used by rattus to generate a configuration file'
+      azure_client_secret:
         required: true
-      AZURE_TENANT_ID:
+        description: 'Client secret for authorization in Azure Cloud, used by rattus to generate a configuration file'
+      azure_tenant_id:
         required: true
+        description: 'Tenant id for authorization in Azure Cloud, used by rattus to generate a configuration file'
       publish-profile:
         required: true
+        description: 'Publish profile used to deploy the assembled application to Azure Cloud'
+      slack_notification_token:
+        required: true
+        description: 'Slack notification token needs for sending notifications about the progress of the workflow'
         
 jobs:
   
   # Installing dependencies and building the application
-  build:
-    runs-on: windows-latest
+  Build:
+    runs-on: ${{ inputs.runner_image }}
     
     # Permissions for fetch an OIDC token for a workflow
     # More information for connect your workflows to authenticate with Azure.
@@ -72,7 +107,7 @@ jobs:
         uses: NuGet/setup-nuget@v1.2
       
       - name: Restore NuGet packages
-        run: cd ${{ inputs.BUILD_PATH }} && nuget restore ${{ inputs.PATH_TO_SOLVE_FILE }}
+        run: cd ${{ inputs.build_path }} && nuget restore ${{ inputs.path_to_solve_file }}
       
       - name: Download Rattus
         uses: robinraju/release-downloader@v1.2
@@ -82,40 +117,36 @@ jobs:
           fileName: "rattus-windows-amd64.exe"
       
       - name: Render config file
-        run: .\rattus-windows-amd64.exe > ${{ inputs.BUILD_PATH }}/Web.Debug.config
+        run: .\rattus-windows-amd64.exe > ${{ inputs.build_path }}/Web.Debug.config
         env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_VAULT: ${{ inputs.AZURE_VAULT }}
-          TEMPLATE_PATH: ${{ inputs.TEMPLATE_PATH }}
+          AZURE_CLIENT_ID: ${{ secrets.azure_client_id }}
+          AZURE_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
+          AZURE_TENANT_ID: ${{ secrets.azure_tenant_id }}
+          AZURE_VAULT: ${{ inputs.azure_vault }}
+          TEMPLATE_PATH: ${{ inputs.template_path }}
      
       - name: Build app for release
-        run: msbuild ${{ inputs.BUILD_PATH }}/${{ inputs.CSPROJ_FILE }} /p:Configuration=Debug /p:Platform=AnyCPU /t:WebPublish /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl=${{ inputs.BUILD_FOLDER }}/${{ inputs.APP_NAME }}-${{ inputs.environment }}
+        run: |
+            msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }} /p:Configuration=Debug /p:Platform=AnyCPU /t:WebPublish /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
       
-      - name: Upload artifact for deployment job
+      - name: Upload artifact for deployment task
         uses: actions/upload-artifact@v2
         with:
-          name: ASP-app
-          path: ${{ inputs.BUILD_PATH }}/${{ inputs.BUILD_FOLDER }}/${{ inputs.APP_NAME }}-${{ inputs.environment }}
+          name: ${{ inputs.app_name }}
+          path: ${{ inputs.build_path }}/${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
       
   # Generated by Azure Depoloyment Center
   # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
   # More GitHub Actions for Azure: https://github.com/Azure/actions
   
-  # Deploying an application to azure cloud
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    environment:
-      name: 'Develop'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
-    steps:
-      - name: Download artifact from build job
+      # Deploying an application to Azure Cloud
+      - name: Download artifact from build task
         uses: actions/download-artifact@v2
+        env:
+          name: '${{ inputs.environment }}'
+          url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
         with:
-          name: ASP-app
+          name: ${{ inputs.app_name }}
       
       # slot-name should always be Production since there is only one available deployment slot
       # A publish profile is a file that contains information and settings for deploy applications and services in Azure Cloud
@@ -126,8 +157,115 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: '${{ inputs.APP_NAME }}-${{ inputs.environment }}'
-          slot-name: 'production' # deployment slot by default for new application
-          # Get publish-profile from https://keys.saritasa.cloud/cred/detail/16857/
+          app-name: '${{ inputs.app_name }}-${{ inputs.environment }}'
+          slot-name: '${{ inputs.deployment_slot }}' # deployment slot by default for new application
           publish-profile: ${{ secrets.publish-profile }}
           package: .
+
+      - name: notify_success
+        if: success()
+        uses: archive/github-actions-slack@v2.7.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.slack_notification_token }}
+          slack-channel: ${{ inputs.slack_channel_id }}
+          slack-blocks: >-
+            [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "✅Success",
+                  "emoji": true
+                }
+              },
+              {
+                "block_id": "text1",
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
+                }
+              },
+              {
+                "block_id": "text2",
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}*"
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "block_id": "text3",
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch* ${{ github.ref_name }} \n*Revision* ${{ github.sha }} \n*Envinroment* ${{ inputs.environment }}"
+                  }
+                ]
+              },
+              {
+                "type": "divider"
+              }
+            ]
+    
+      - name: notify_failure
+        if: failure()
+        uses: archive/github-actions-slack@v2.7.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.slack_notification_token }}
+          slack-channel: ${{ inputs.slack_channel_id }}
+          slack-blocks: >-
+            [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "❌Failure",
+                  "emoji": true
+                }
+              },
+              {
+                "block_id": "text1",
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
+                }
+              },
+              {
+                "block_id": "text2",
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}*"
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "block_id": "text3",
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch* ${{ github.ref_name }} \n*Revision* ${{ github.sha }} \n*Envinroment* ${{ inputs.environment }}"
+                  }
+                ]
+              },
+              {
+                "type": "divider"
+              }
+            ]
+
+  Clean_Workspace:
+    runs-on: ${{ inputs.runner_image }}
+    timeout-minutes: 25
+    needs: Build
+    steps:
+      - name: Clean Workspace
+        run: rm -rf "${{ github.workspace }}"
