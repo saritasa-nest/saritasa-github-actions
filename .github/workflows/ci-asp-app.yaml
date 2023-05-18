@@ -95,7 +95,10 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
+    
+    outputs:
+        webapp-url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
@@ -191,7 +194,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}*"
+                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}* /n*Url*: ${{ steps.deploy-to-webapp.outputs.webapp-url }}"
                 }
               },
               {
@@ -203,7 +206,7 @@ jobs:
                 "elements": [
                   {
                     "type": "mrkdwn",
-                    "text": "*Branch* ${{ github.ref_name }} \n*Revision* ${{ github.sha }} \n*Envinroment* ${{ inputs.environment }}"
+                    "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
                   }
                 ]
               },
@@ -253,7 +256,7 @@ jobs:
                 "elements": [
                   {
                     "type": "mrkdwn",
-                    "text": "*Branch* ${{ github.ref_name }} \n*Revision* ${{ github.sha }} \n*Envinroment* ${{ inputs.environment }}"
+                    "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
                   }
                 ]
               },
