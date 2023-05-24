@@ -103,6 +103,7 @@ jobs:
 
     env:
       slack_webhook_url: ${{ secrets.slack_webhook_url }}
+      slack_webhook_type: incoming_webhook
 
     permissions:
       id-token: write
