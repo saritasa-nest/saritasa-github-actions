@@ -184,7 +184,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Text1",
+              "text": "Success",
               "blocks": [
                 {
                   "type": "header",
@@ -235,7 +235,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Text1",
+              "text": "Failure",
               "blocks": [
                 {
                   "type": "header",
