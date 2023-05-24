@@ -1,0 +1,281 @@
+
+name: CI-ASP
+
+# ----------------------------------------------------------------------------------------------------------
+# CI Pipeline for building ASP app and deplyoing it to Azure App Service
+# - get config file via Rattus https://github.com/Saritasa/rattus
+# - deploy to Azure App Service
+# - notifies of success/failure to slack channel
+# 
+# Original Author: Rostislav Udaltsov
+# Created: 05/11/2023
+# ----------------------------------------------------------------------------------------------------------
+
+on:
+  workflow_call:
+    inputs:
+      # Build configuration
+      environment:
+        required: true
+        type: string
+        description: 'Deployment environment'
+      configuration:
+        required: true
+        type: string
+        description: 'Configuration of build Debug/Release'
+      platform_identifier:
+        required: true
+        type: string
+        description: 'Platform for build'
+      build_path:
+        required: true
+        type: string
+        description: 'Path to the application build directory'
+      template_path:
+        required: true
+        type: string
+        description: 'The path to the configuration file template used by the rattus to generate the configuration file'
+      build_folder:
+        required: true
+        type: string
+        description: 'The name of the folder where the application is going to'
+      path_to_solve_file:
+        required: true
+        type: string
+        description: 'Path to the dependency file'
+      csproj_file:
+        required: true
+        type: string
+        description: 'The path to the application build file'
+      app_name:
+        required: true
+        type: string
+        description: 'Name of the application being built'
+      azure_vault:
+        required: true
+        type: string
+        description: 'The URL of the secret repository in Azure Cloud is used by rattus to generate a configuration file'
+      deployment_slot:
+        required: true
+        type: string
+        description: 'Deployment slot in Azure Cloud'
+      runner_image:
+        required: true
+        type: string
+        description: 'The image of the runner OS on which workflow is running'
+
+    # For get credentials for Azure Cloud use this instruction
+    # https://learn.microsoft.com/en-us/dotnet/architecture/devops-for-aspnet-developers/actions-deploy
+    # For get publish-profile use this instruction
+    # https://learn.microsoft.com/en-us/visualstudio/azure/how-to-get-publish-profile-from-azure-app-service?view=vs-2022&viewFallbackFrom=vs-2017
+    secrets:
+      azure_client_id:
+        required: true
+        description: 'Client id for authorization in Azure Cloud, used by rattus to generate a configuration file'
+      azure_client_secret:
+        required: true
+        description: 'Client secret for authorization in Azure Cloud, used by rattus to generate a configuration file'
+      azure_tenant_id:
+        required: true
+        description: 'Tenant id for authorization in Azure Cloud, used by rattus to generate a configuration file'
+      publish-profile:
+        required: true
+        description: 'Publish profile used to deploy the assembled application to Azure Cloud'
+      slack_webhook_url:
+        required: true
+        description: 'Slack webhook url needs for sending notifications about the progress of the workflow'
+        
+jobs:
+  
+  # Installing dependencies and building the application
+  Build:
+    runs-on: ${{ inputs.runner_image }}
+    
+    # Permissions for fetch an OIDC token for a workflow
+    # More information for connect your workflows to authenticate with Azure.
+    # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure
+
+    env:
+      slack_webhook_url: ${{ secrets.slack_webhook_url }}
+      slack_webhook_type: incoming_webhook
+
+    permissions:
+      id-token: write
+      contents: read
+    
+    outputs:
+        webapp-url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.3
+      
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v1.2
+      
+      - name: Restore NuGet packages
+        run: cd ${{ inputs.build_path }} && nuget restore ${{ inputs.path_to_solve_file }}
+      
+      - name: Download Rattus
+        uses: robinraju/release-downloader@v1.2
+        with:
+          repository: "saritasa/rattus"
+          tag: "0.2"
+          fileName: "rattus-windows-amd64.exe"
+      
+      - name: Render config file
+        run: .\rattus-windows-amd64.exe > ${{ inputs.build_path }}/Web.Debug.config
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.azure_client_id }}
+          AZURE_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
+          AZURE_TENANT_ID: ${{ secrets.azure_tenant_id }}
+          AZURE_VAULT: ${{ inputs.azure_vault }}
+          TEMPLATE_PATH: ${{ inputs.template_path }}
+     
+      - name: Build app for release
+        run: >
+          msbuild ${{ inputs.build_path }}/${{ inputs.csproj_file }}
+          /p:Configuration=${{ inputs.configuration }}
+          /p:Platform=${{ inputs.platform_identifier }}
+          /t:WebPublish
+          /p:WebPublishMethod=FileSystem
+          /p:DeleteExistingFiles=True
+          /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
+      
+      - name: Upload artifact for deployment task
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ inputs.app_name }}
+          path: ${{ inputs.build_path }}/${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
+      
+      # Generated by Azure Depoloyment Center
+      # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+      # More GitHub Actions for Azure: https://github.com/Azure/actions
+  
+      # Deploying an application to Azure Cloud
+      - name: Download artifact from build task
+        uses: actions/download-artifact@v2
+        env:
+          name: '${{ inputs.environment }}'
+          url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+        with:
+          name: ${{ inputs.app_name }}
+      
+      # slot-name should always be Production since there is only one available deployment slot
+      # A publish profile is a file that contains information and settings for deploy applications and services in Azure Cloud
+      # publish-profile is a file which is unique for each app serivce. It can be downloaded from app service's overview page on Azure portal:
+      # https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
+      
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: '${{ inputs.app_name }}-${{ inputs.environment }}'
+          slot-name: '${{ inputs.deployment_slot }}' # deployment slot by default for new application
+          publish-profile: ${{ secrets.publish-profile }}
+          package: .
+
+      - name: notify_success
+        if: success()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "Success",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅Success",
+                    "emoji": true
+                  }
+                },
+                {
+                  "block_id": "text1",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
+                  }
+                },
+                {
+                  "block_id": "text2",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}* \n*Url*: ${{ steps.deploy-to-webapp.outputs.webapp-url }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "block_id": "text3",
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                }
+              ]
+            }
+
+      - name: notify_failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "Failure",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌Failure",
+                    "emoji": true
+                  }
+                },
+                {
+                  "block_id": "text1",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
+                  }
+                },
+                {
+                  "block_id": "text2",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}*"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "block_id": "text3",
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                }
+              ]
+            }            
