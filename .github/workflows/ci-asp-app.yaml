@@ -87,9 +87,9 @@ on:
       publish-profile:
         required: true
         description: 'Publish profile used to deploy the assembled application to Azure Cloud'
-      slack_notification_token:
+      slack_webhook_url:
         required: true
-        description: 'Slack notification token needs for sending notifications about the progress of the workflow'
+        description: 'Slack webhook url needs for sending notifications about the progress of the workflow'
         
 jobs:
   
@@ -100,6 +100,9 @@ jobs:
     # Permissions for fetch an OIDC token for a workflow
     # More information for connect your workflows to authenticate with Azure.
     # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure
+
+    env:
+      slack_webhook_url: ${{ secrets.slack_webhook_url }}
 
     permissions:
       id-token: write
@@ -182,100 +185,102 @@ jobs:
 
       - name: notify_success
         if: success()
-        uses: archive/github-actions-slack@v2.7.0
+        uses: slackapi/slack-github-action@v1.24.0
         with:
-          slack-bot-user-oauth-access-token: ${{ secrets.slack_notification_token }}
-          slack-channel: ${{ inputs.slack_channel_id }}
-          slack-blocks: >-
-            [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "✅Success",
-                  "emoji": true
-                }
-              },
-              {
-                "block_id": "text1",
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
-                }
-              },
-              {
-                "block_id": "text2",
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}* \n*Url*: ${{ steps.deploy-to-webapp.outputs.webapp-url }}"
-                }
-              },
-              {
-                "type": "divider"
-              },
-              {
-                "block_id": "text3",
-                "type": "context",
-                "elements": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
+          payload: |
+            {
+              "text": "Text1",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅Success",
+                    "emoji": true
                   }
-                ]
-              },
-              {
-                "type": "divider"
-              }
-            ]
-    
+                },
+                {
+                  "block_id": "text1",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
+                  }
+                },
+                {
+                  "block_id": "text2",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}* \n*Url*: ${{ steps.deploy-to-webapp.outputs.webapp-url }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "block_id": "text3",
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                }
+              ]
+            }
+
       - name: notify_failure
         if: failure()
-        uses: archive/github-actions-slack@v2.7.0
+        uses: slackapi/slack-github-action@v1.24.0
         with:
-          slack-bot-user-oauth-access-token: ${{ secrets.slack_notification_token }}
-          slack-channel: ${{ inputs.slack_channel_id }}
-          slack-blocks: >-
-            [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "❌Failure",
-                  "emoji": true
-                }
-              },
-              {
-                "block_id": "text1",
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
-                }
-              },
-              {
-                "block_id": "text2",
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}*"
-                }
-              },
-              {
-                "type": "divider"
-              },
-              {
-                "block_id": "text3",
-                "type": "context",
-                "elements": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
+          payload: |
+            {
+              "text": "Text1",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌Failure",
+                    "emoji": true
                   }
-                ]
-              },
-              {
-                "type": "divider"
-              }
-            ]
+                },
+                {
+                  "block_id": "text1",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Event *${{ github.event_name }}* to *${{ github.repository }}* by *${{ github.ACTOR }}*"
+                  }
+                },
+                {
+                  "block_id": "text2",
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Jobs in worflow *${{ github.workflow }}* of *${{ github.repository }}* has *${{ job.status }}*"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "block_id": "text3",
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch*: ${{ github.ref_name }} \n*Commit message*: ${{ github.event.head_commit.message }} \n*Revision*: ${{ github.sha }} \n*Envinroment*: ${{ inputs.environment }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                }
+              ]
+            }            
