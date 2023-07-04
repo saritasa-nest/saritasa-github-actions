@@ -6,6 +6,12 @@
 # Example usage:
 # semver | process_dotnet
 
+# xmlstartlet is crucial for script
+if ! [[ -x "$(command -v xmlstarlet)" ]]; then
+    echo "error: xmlstarlet is not installed"
+    exit -1
+fi
+
 process_projectfile(){
     [[ -z $1 ]] && printf "No path for projectfile" && return 1
     printf "Processing %s:\n" "$1"
