@@ -20,7 +20,7 @@ process_projectfile(){
     printf "[updated];\n"
     printf "Version "
     xmlstarlet ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n Version -v $SEMVER "$1"
-    printf "[updated];\n"
+    printf "[updated];\n\n"
   }
 export -f process_projectfile
 
@@ -45,6 +45,7 @@ if [[ -n "$JSON" && $? -eq 0 ]]; then
     export ASSEMBLY_SEMVER INFORM_VERSION SEMVER
     # Processing
     printf "Starting processing csproj files with:\nASSEMBLY_SEMVER=%s\nINFORM_VERSION=%s\nSEMVER=%s\n" "$ASSEMBLY_SEMVER" "$INFORM_VERSION" "$SEMVER"
+    printf '=%.0s' {1..15}; echo
     find . -type f -name "*.csproj" -exec bash -c "process_projectfile \"{}\"" \;
 else
     printf "Expected valid JSON as input"
