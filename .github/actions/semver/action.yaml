@@ -35,6 +35,10 @@ runs:
         else
           echo "json=${JSON}" >> $GITHUB_OUTPUT
         fi
+    - id: result
+      shell: bash
+      run: |
+        echo "Building ${{fromJson(steps.version.outputs.json).SemVer}}"
     - id: dotnet
       if: inputs.process_dotnet
       shell: bash 
@@ -46,7 +50,7 @@ runs:
             if [[ "${RUNNER_OS}" == "Windows" ]]; then
                 choco install xmlstarlet
             elif [[ "${RUNNER_OS}" == "Linux" ]]; then
-                sudo apt install xmlstarlet
+                sudo apt install xmlstarlet -y
             elif [[ "${RUNNER_OS}" == "macOS" ]]; then
                 brew install xmlstarlet
             else
@@ -54,7 +58,7 @@ runs:
                 exit -1
             fi
         fi
-        echo "${{steps.version.outputs.json}}" | process_dotnet
+        semver | process_dotnet
     - id: file
       shell: bash
       if: inputs.file != ''
