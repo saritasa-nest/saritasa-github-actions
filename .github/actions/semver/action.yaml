@@ -35,11 +35,26 @@ runs:
         else
           echo "json=${JSON}" >> $GITHUB_OUTPUT
         fi
-    # - id: dotnet
-    #   if: inputs.process_dotnet
-    #   uses: mikefarah/yq@master
-    #   cmd: |
-    #     echo "${{steps.version.outputs.json}}" | process_dotnet
+    - id: dotnet
+      if: inputs.process_dotnet
+      shell: bash 
+      run: |
+        set -o pipefail
+
+        if ! [[ -x "$(command -v xmlstarlet)" ]]; then
+            echo "warning: xmlstarlet is not installed"
+            if [[ "${RUNNER_OS}" == "Windows" ]]; then
+                choco install xmlstarlet
+            elif [[ "${RUNNER_OS}" == "Linux" ]]; then
+                sudo apt install xmlstarlet
+            elif [[ "${RUNNER_OS}" == "macOS" ]]; then
+                brew install xmlstarlet
+            else
+                echo "Unknown RUNNER_OS:${RUNNER_OS}"
+                exit -1
+            fi
+        fi
+        echo "${{steps.version.outputs.json}}" | process_dotnet
     - id: file
       shell: bash
       if: inputs.file != ''

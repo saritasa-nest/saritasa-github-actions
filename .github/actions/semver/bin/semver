@@ -5,7 +5,7 @@
 # See more in readme: https://github.com/saritasa-nest/saritasa-devops-docker-images/blob/6d1274f24a18f9c24ca7a950da24a246d8bb6c87/public/git-version/README.md
 
 set -Eeuo pipefail
-shopt -s extglob 
+shopt -s extglob
 
 # Helpers functions
 ## Use VERSIONING_DEBUG=1 env var for verbose output
@@ -16,7 +16,7 @@ else
 		>&2 echo "$LOG_PREFIX $1"
 	}
 fi
-pexit() {	
+pexit() {
 	>&2 echo "$LOG_PREFIX $1"
 	exit 1
 }
@@ -31,15 +31,15 @@ pexit() {
 #	Array of strings
 # Output:
 #	A new string by joining all the elements of an iterable, separated by the given separator.
-join_by() { 
-	local IFS="$1" 
-	shift 
-	echo "$*" 
+join_by() {
+	local IFS="$1"
+	shift
+	echo "$*"
 }
 
 ## REGEX for matching for MajorMinorPatch (MMP) from tag
 ## Proceed result to BASH_REMATCH: https://www.bashsupport.com/bash/variables/bash/bash_rematch/
-MMP_TAG_REGEX="^v?([0-9]+\.[0-9]+\.[0-9]+)$"
+MMP_TAG_REGEX="^v?([0-9]+\.[0-9]+\.[0-9]+)"
 
 ## Default value for MajorMinorPatch (MMP) when it can't be got from tag/branch name
 MMP_UNKNOWN=${MMP_UNKNOWN:-"0.0.0"}
@@ -69,7 +69,7 @@ PATCH=
 BUILD=
 
 ## parsed and/or calculated MAJOR.MINOR.PATCH version for current commit, like '1.2.3'
-MMP= 
+MMP=
 
 ## calculated SEMVER or MAJOR.MINOR.PATCH-SUFFIX.BUILD version for current commit, like '1.2.3-dev.4'
 SEMVER=
@@ -116,7 +116,7 @@ EOF
 # Output:
 #	Branch name
 _get_main_branch_name(){
-	git branch -r --format='%(refname:short)' | grep "main\|master" -m1 | xargs
+	git branch -r --format='%(refname:short)' | grep "main\|master" -m1
 }
 
 #######################################
@@ -186,7 +186,7 @@ get_MMP_TAG(){
 #	BUILD
 # Arguments:
 #	None
-get_version_for_main(){
+get_version_for_main_branch(){
 	local LOG_PREFIX="get_version_for_main: "
 	local BRANCH=$(_get_main_branch_name)
 	if ! get_MMP_TAG $BRANCH ; then
@@ -207,7 +207,7 @@ get_version_for_main(){
 #	BUILD
 # Arguments:
 #	None
-get_version_for_head(){
+get_version_for_detached_head(){
 	local BRANCH
 	if ! get_MMP_TAG; then
 		pexit "Detached HEAD without tag detected. Use specific ref for versioning"
@@ -236,10 +236,11 @@ get_version_for_head(){
 #	BUILD
 # Arguments:
 #	None
-get_version_for_release(){
+get_version_for_release_branch(){
 	local LOG_PREFIX="get_version_for_release: "
 	local BRANCH=$(_get_branch_name)
-	if [[ ! $BRANCH =~ ^release/([0-9]+.[0-9]+.[0-9]+) ]]; then
+	# postfix validation
+	if [[ ! $BRANCH =~ ^release\/([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
 		pexit "Wrong release name. Expected SEMVER: release/x.x.x"
 	fi
 	DESCRIPTION="Release branch"
@@ -258,7 +259,7 @@ get_version_for_release(){
 #	BUILD
 # Arguments:
 #	None
-get_version_for_hotfix(){
+get_version_for_hotfix_branch(){
 	local LOG_PREFIX="get_version_for_hotfix: "
 	local MAIN_BRANCH=$(_get_main_branch_name)
 	local BRANCH=$(_get_branch_name)
@@ -269,17 +270,48 @@ get_version_for_hotfix(){
 	fi
 	# split MMP_TAG to MMP_ARRAY by '.'
 	IFS='.' read -ra MMP_ARRAY <<< "$MMP_TAG"
-	((MMP_array[2]++))
-	MMP=$(join_by . "${MMP_array[@]}")
+	((MMP_ARRAY[2]=MMP_ARRAY[2]+1))
+	MMP=$(join_by . "${MMP_ARRAY[@]}")
 	BUILD=$(_get_commit_weigh)
-
-	if [[ $BRANCH =~ ^hotfix/(.*)$ ]]; then
+	# postfix validation as suffix
+	if [[ $BRANCH =~ ^hotfix\/(.*)$ ]]; then
 		SUFFIX="-${BASH_REMATCH[1]}"
 		DESCRIPTION="Hotfix branch"
 	else
 		SUFFIX="-unknown"
 		DESCRIPTION="Unknown branch"
 	fi
+}
+#######################################
+# Filling semver global env vars for development branches
+# Globals:
+#	MMP_TAG
+#	MMP_UNKNOWN
+#	DESCRIPTION
+#	MMP
+#	BUILD
+# Arguments:
+#	None
+get_version_for_staging_branch(){
+	local LOG_PREFIX="get_version_for_staging: "
+	local MAIN_BRANCH=$(_get_main_branch_name)
+	local BRANCH=$(_get_branch_name)
+	local MMP_ARRAY
+	if ! get_MMP_TAG $BRANCH; then
+		pecho "No tag found for $BRANCH. Falling to $MAIN_BRANCH"
+		if ! get_MMP_TAG $MAIN_BRANCH; then
+			pecho "No tag found for $MAIN_BRANCH. Falling to $MMP_UNKNOWN"
+			MMP_TAG="$MMP_UNKNOWN"
+		fi
+	fi
+	# split MMP_TAG to MMP_ARRAY by '.'
+	IFS='.' read -ra MMP_ARRAY <<< "$MMP_TAG"
+	(( MMP_ARRAY[1]=MMP_ARRAY[1]+1 ))
+	MMP_ARRAY[2]=0
+	MMP=$(join_by . "${MMP_ARRAY[@]}")
+	BUILD=$(_get_commit_weigh)
+	DESCRIPTION="Staging branch"
+	SUFFIX="-staging"
 }
 
 #######################################
@@ -292,12 +324,12 @@ get_version_for_hotfix(){
 #	BUILD
 # Arguments:
 #	None
-get_version_for_development(){
+get_version_for_development_branch(){
 	local LOG_PREFIX="get_version_for_develop: "
 	local MAIN_BRANCH=$(_get_main_branch_name)
 	local BRANCH=$(_get_branch_name)
 	local MMP_ARRAY
-	if ! get_MMP_TAG $BRANCH; then 
+	if ! get_MMP_TAG $BRANCH; then
 		pecho "No tag found for $BRANCH. Falling to $MAIN_BRANCH"
 		if ! get_MMP_TAG $MAIN_BRANCH; then
 			pecho "No tag found for $MAIN_BRANCH. Falling to $MMP_UNKNOWN"
@@ -307,13 +339,14 @@ get_version_for_development(){
 	# split MMP_TAG to MMP_ARRAY by '.'
 	IFS='.' read -ra MMP_ARRAY <<< "$MMP_TAG"
 	(( MMP_ARRAY[1]=MMP_ARRAY[1]+1 ))
-	MMP_ARRAY[2]=0 
+	MMP_ARRAY[2]=0
 	MMP=$(join_by . "${MMP_ARRAY[@]}")
 	BUILD=$(_get_commit_weigh)
 
 	if [[ $BRANCH == develop ]]; then
 		DESCRIPTION="Develop branch"
 		SUFFIX="-dev"
+	# postfix validation for feature branches
 	elif [[ $BRANCH =~ ^feature/(.*)$ ]]; then
 		DESCRIPTION="Feature branch"
 		SUFFIX="-${BASH_REMATCH[1]}"
@@ -330,7 +363,7 @@ get_version_for_development(){
 # Arguments:
 #	None
 usage() {
-	cat <<-EOF 
+	cat <<-EOF
 	Usage: $(basename "${BASH_SOURCE[0]}") [-h]
 
 	Script provides application version info for project using git branches and tags in json format
@@ -347,7 +380,7 @@ usage() {
 }
 
 #######################################
-# Main function: calculate semver vars for current repo 
+# Main function: calculate semver vars for current repo
 # Globals:
 #	MAJOR
 #	MINOR
@@ -368,15 +401,17 @@ if [[ $# -eq 0 ]]; then
 	# calculating MMP, SUFFIX, BUILD according matched branch name
 	pecho "Getting version for $BRANCH"
 	if [[ $BRANCH =~ main|master ]]; then
-		get_version_for_main
+		get_version_for_main_branch
 	elif [[ $BRANCH == HEAD ]]; then
-		get_version_for_head
+		get_version_for_detached_head
 	elif [[ $BRANCH =~ ^release.* ]]; then
-		get_version_for_release
+		get_version_for_release_branch
 	elif [[ $BRANCH =~ ^hotfix.* ]]; then
-		get_version_for_hotfix
-	else 
-		get_version_for_development
+		get_version_for_hotfix_branch
+	elif [[ $BRANCH == staging ]]; then
+		get_version_for_staging_branch
+	else
+		get_version_for_development_branch
 	fi
 
 	# --------------------------------------------
