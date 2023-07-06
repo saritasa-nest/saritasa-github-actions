@@ -19,7 +19,7 @@ runs:
   steps:
     - id: debug
       shell: bash
-      if: inputs.debug
+      if: inputs.debug == true
       run: |
         echo "VERSIONING_DEBUG=true" >> "$GITHUB_ENV"
     - id: set-path
@@ -40,7 +40,7 @@ runs:
       run: |
         echo "Building ${{fromJson(steps.version.outputs.json).SemVer}}"
     - id: dotnet
-      if: inputs.process_dotnet
+      if: inputs.process_dotnet == true
       shell: bash 
       run: |
         set -o pipefail
