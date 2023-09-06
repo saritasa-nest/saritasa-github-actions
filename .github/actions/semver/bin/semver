@@ -80,33 +80,6 @@ ASSEMBLY_SEMVER=
 ## calculated INFORM_SEMVER or MAJOR.MINOR.PATCH-SUFFIX.BUILD+COMMIT version for current commit, like '1.2.3-dev.4+b88c59d6f842a30421bf0f85fb173ff061973733
 INFORM_VERSION=
 
-## template for app output with calculated values
-## Example
-## {
-##  "Major": "1",
-##  "Minor": "2",
-##  "Patch": "3",
-##  "MajorMinorPatch": "1.2.3",
-##  "SemVer": "1.2.3-dev.4",
-##  "AssemblySemVer": "1.2.3.4",
-##  "InformationalVersion": "1.2.3-dev.4+b88c59d6f842a30421bf0f85fb173ff061973733",
-##  "Sha": "b88c59d6f842a30421bf0f85fb173ff061973733"
-##}
-JSON_TEMPLATE=$(cat <<EOF
-{
-	"Major":"#MAJOR",
-	"Minor":"#MINOR",
-	"Patch":"#PATCH",
-	"Build":"#BUILD",
-	"MajorMinorPatch":"#MMP",
-	"SemVer":"#SEMVER",
-	"AssemblySemVer":"#ASSEMBLY_SEMVER",
-	"InformationalVersion":"#INFORM_VERSION",
-	"Sha":"#COMMIT_HASH"
-}
-EOF
-)
-
 #######################################
 # Get main branch name in current git repo
 # Globals:
@@ -428,7 +401,7 @@ if [[ $# -eq 0 ]]; then
 	ASSEMBLY_SEMVER=${MMP}.${BUILD}
 	INFORM_VERSION=$(echo "${MMP}${SUFFIX}+${COMMIT_HASH}" | sed "s/\//-/g")
 	export MAJOR MINOR PATCH BUILD MMP ASSEMBLY_SEMVER INFORM_VERSION SEMVER COMMIT_HASH
-	echo $JSON_TEMPLATE | sed -e 's/#/$/g' | envsubst
+	printf "{\"Major\":\"$MAJOR\",\"Minor\":\"$MINOR\",\"Patch\":\"$PATCH\",\"Build\":\"$BUILD\",\"MajorMinorPatch\":\"$MMP\",\"SemVer\":\"$SEMVER\",\"AssemblySemVer\":\"$ASSEMBLY_SEMVER\",\"InformationalVersion\":\"$INFORM_VERSION\",\"Sha\":\"$COMMIT_HASH\"}"
 elif [[ $1 =~ --help|-h ]]; then
 	usage >&2
 else
