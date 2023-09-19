@@ -35,10 +35,6 @@ on:
         required: true
         type: number
         description: 'The version of python'
-      ansible_version:
-        required: true
-        type: number
-        description: 'The version of ansible'
       runner_image:
         required: true
         type: string
@@ -66,7 +62,7 @@ jobs:
       - name: Install Ansible
         run: |
           python -m pip install --upgrade pip
-          pip install ansible==${{ inputs.ANSIBLE_VERSION }} requests jinja2
+          pip install ansible requests jinja2
       - name: Install Ansistrano roles
         run: |
           ansible-galaxy install ansistrano.deploy ansistrano.rollback
