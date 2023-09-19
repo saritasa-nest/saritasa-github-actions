@@ -38,6 +38,10 @@ name: CI-Wordpress
         required: true
         type: number
         description: 'The version of ansible'
+      runner_image:
+        required: true
+        type: string
+        description: 'The image of the runner OS on which workflow is running'
     # Secrets for ssh
     secrets:
       ssh_deploy_user:
@@ -49,7 +53,7 @@ name: CI-Wordpress
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_image }}
 
     steps:
       # Preparing workspace: install python, ansible and ansistrano-role
