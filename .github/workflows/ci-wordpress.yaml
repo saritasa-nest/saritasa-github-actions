@@ -11,10 +11,14 @@ on:
   workflow_call:
     inputs:
       # Build configuration
-      production_host:
+      server_host:
         required: true
         type: string
-        description: 'The pruduction server'
+        description: 'The address of the server'
+      environment:
+        required: true
+        type: string
+        description: 'The environment'
       playbook_path:
         required: true
         type: string
@@ -55,14 +59,17 @@ jobs:
     steps:
       # Preparing workspace: install python, ansible and ansistrano-role
       - uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
           python-version: ${{ inputs.PYTHON_VERSION }}
+
       - name: Install Ansible
         run: |
           python -m pip install --upgrade pip
           pip install ansible requests jinja2
+
       - name: Install Ansistrano roles
         run: |
           ansible-galaxy install ansistrano.deploy ansistrano.rollback
@@ -72,6 +79,7 @@ jobs:
         uses: webfactory/ssh-agent@v0.5.2
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       # Deploy the project
       - name: Ansistrano deploy
         env:
@@ -81,5 +89,10 @@ jobs:
           ANSIBLE_PIPELINING: True
           ANSIBLE_REMOTE_USER: ${{ secrets.SSH_DEPLOY_USER }}
         run: |
-          ansible-playbook -i ${{ inputs.PRODUCTION_HOST }} ${{ inputs.PLAYBOOK_PATH }} \
-          --extra-vars 'deploy_path=${{ inputs.DEPLOY_PATH }} deploy_repo=${{ inputs.DEPLOY_REPO }} deploy_branch=${{ inputs.DEPLOY_BRANCH }}'
+          ansible-playbook -i \
+          ${{ inputs.SERVER_HOST }} \
+          ${{ inputs.PLAYBOOK_PATH }} \
+          --extra-vars \
+          'deploy_path=${{ inputs.DEPLOY_PATH }} \
+           deploy_repo=${{ inputs.DEPLOY_REPO }} \
+           deploy_branch=${{ inputs.DEPLOY_BRANCH }}'
