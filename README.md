@@ -77,13 +77,22 @@ jobs:
       - { role: ansistrano.deploy }
 ```
 `ansistrano_keep_releases` number of stored releases default 3
+
 `ansistrano_deploy_from` where my local project is (relative or absolute path)
+
 `ansistrano_deploy_to` base path to deploy to
+
 `ansistrano_git_repo` location of the git repository
+
 `ansistrano_git_branch` what version of the repository to check out. This can be the full 40-character SHA-1 hash, the literal string HEAD, a branch name, or a tag name
+
 `ansistrano_deploy_via` deployment strategy - method used to deliver code. Options are copy, download, git, rsync, rsync_direct, svn, or s3.
+
 `ansistrano_git_depth` additional history truncated to the specified number or revisions
+
 `ansistrano_shared_paths` shared folders, usually folders with images or other bulk data
+
 `ansistrano_shared_files` files that should not get into the repository are not necessary for the work of Wordpress
+
 
 More information for adnsistrano playbook in official [docs](https://github.com/ansistrano/deploy/blob/master/README.md)
