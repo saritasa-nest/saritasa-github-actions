@@ -1,20 +1,17 @@
-# saritasa-github-actions
-GitHub actions
-
 ## CI-wordpress reusable workflow
 
 ### Inputs variables
 
-| Variable       | Type          | Example                  | Discription                                                     |
-| ---------------|:-------------:| :------------------------|-----------------------------------------------------------------|
-| server_host    | string        | 59.128.16.24             | The address of the server for deploy                            |
-| environment    | string        | production               | The environment for deploy i.e development, staging, production |
-| playbook_path  | string        | ci/ansible/playbook.yaml | The path to the file relative to the repository, used in Ansistrano deploy task |
-| deploy_path    | string        | ~/deploy/                | The path to deploy on the remote server |
-| deploy_repo    | string        | git@github.com:saritasa-nest/ceai-wordpress.git | The path to deploy on the remote server |
-| deploy_branch  | string        | develop | The branch from which the deployment is made  |
+| Variable       | Type          | Example                  | Discription                                                                                                       |
+| ---------------|:-------------:| :------------------------|-------------------------------------------------------------------------------------------------------------------|
+| server_host    | string        | 59.128.16.24             | The address of the server for deploy                                                                              |
+| environment    | string        | production               | The environment for deploy i.e development, staging, production                                                   |
+| playbook_path  | string        | ci/ansible/playbook.yaml | The path to the file relative to the repository from which the deployment is made, used in Ansistrano deploy task |
+| deploy_path    | string        | ~/deploy/                | The path to deploy on the remote server                                                                           |
+| deploy_repo    | string        | git@github.com:saritasa-nest/ceai-wordpress.git | The path to deploy on the remote server                                                    |
+| deploy_branch  | string        | develop                  | The branch from which the deployment is made                                                                      |
 | python_version | number        | 3.11.4 | Each python version supports a certain range of ansible versions, so we need to specify the current version of python in order to install the latest version of ansible. |
-| runner         | string        | ubuntu-latest | The runner on which workflow is running: ubuntu, macos, windows, etc |
+| runner         | string        | ubuntu-latest | The runner on which workflow is running: ubuntu, macos, windows, etc                                                         |
 
 ### Inputs secrets
 
@@ -24,13 +21,13 @@ GitHub actions
 
 ### Examples
 
+#### Workflow for deploy
+
+This implementation is used in the [CEAI-Wordpress project](https://github.com/saritasa-nest/ceai-wordpress/tree/main/.github/workflows) project to deploy Wordpress on shared hosting.
+
 ```bash
 name: Deploy to Bluehost
 on:
-  push:
-    branches:
-      - feature/add-ci
-
   workflow_dispatch:
 
 jobs:
@@ -39,8 +36,8 @@ jobs:
     with:
       ENVIRONMENT: production                                      # The Environment for deploy
       SERVER_HOST: 50.87.253.20                                    # The pruduction server
-      SSH_DEPLOY_USER: ${{ vars.SSH_DEPLOY_USER }}                 # The username for for connect to production server via ssh
-      PLAYBOOK_PATH: ci/ansible/ansistrano-deploy.yml              # The path to the file relative to the repository
+      SSH_DEPLOY_USER: ${{ vars.SSH_DEPLOY_USER }}                 # The username for connect to production server via ssh
+      PLAYBOOK_PATH: ci/ansible/ansistrano-deploy.yml              # The path to the file relative to the repository from which the deployment is made
       DEPLOY_PATH: ~/deploy/                                       # The path to deploy on the production server
       DEPLOY_REPO: git@github.com:saritasa-nest/ceai-wordpress.git # The repository for deploy
       DEPLOY_BRANCH: develop                                       # The branche for deploy
@@ -94,5 +91,40 @@ jobs:
 
 `ansistrano_shared_files` files that should not get into the repository are not necessary for the work of Wordpress
 
+#### Workflow for rollback for one step back
+
+```bash
+name: Rollback to Previously release
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: saritasa-nest/saritasa-github-actions/.github/workflows/ci-wordpress.yaml@v2.4-dev.1
+    with:
+      ENVIRONMENT: production                                      # The Environment for deploy
+      SERVER_HOST: 50.87.253.20                                    # The pruduction server
+      SSH_DEPLOY_USER: ${{ vars.SSH_DEPLOY_USER }}                 # The username for connect to production server via ssh
+      PLAYBOOK_PATH: ci/ansible/ansistrano-rollback.yml              # The path to the file relative to the repository from which the deployment is made
+      DEPLOY_PATH: ~/deploy/                                       # The path to deploy on the production server
+      PYTHON_VERSION: 3.11                                         # The version of python
+      RUNNER: ubuntu-latest                                        # The type of github runner
+
+    secrets:
+      ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+```
+
+### Ansistrano rollback playbook
+
+```bash
+---
+- name: rollback
+  hosts: all
+  vars:
+    ansistrano_deploy_to: "{{ deploy_path }}"
+  roles:
+      - { role: ansistrano.rollback }
+```
 
 More information for adnsistrano playbook in official [docs](https://github.com/ansistrano/deploy/blob/master/README.md)

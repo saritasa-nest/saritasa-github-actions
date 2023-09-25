@@ -1,10 +1,10 @@
 name: CI-Wordpress
 
 # ----------------------------------------------------------------------------------------------------------
-# CI Pipeline for deploy wordpress to shared hosting by ansistrano ansible role
+# Pipeline rollback the release by one version on shared hosting by ansistrano ansible role
 #
 # Original Author: Rostislav Udaltsov
-# Created: 09/19/2023
+# Created: 09/25/2023
 # ----------------------------------------------------------------------------------------------------------
 
 on:
@@ -26,19 +26,11 @@ on:
       playbook_path:
         required: true
         type: string
-        description: 'TThe path to the file relative to the repository from which the deployment is made'
+        description: 'The path to the file relative to the repository from which the deployment is made'
       deploy_path:
         required: true
         type: string
         description: 'The path to deploy on the production server'
-      deploy_repo:
-        required: true
-        type: string
-        description: 'The repository for deploy'
-      deploy_branch:
-        required: true
-        type: string
-        description: 'The branch for deploy'
       python_version:
         required: true
         type: number
@@ -86,7 +78,7 @@ jobs:
           ssh-keyscan -H ${{ inputs.server_host }} >> ~/.ssh/known_hosts
 
       # Deploy the project
-      - name: Ansistrano deploy
+      - name: Ansistrano rollback
         env:
           # Environment variables for ansible must be in uppercase
           ANSIBLE_GATHERING: 'smart'
@@ -98,5 +90,3 @@ jobs:
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
           'deploy_path=${{ inputs.DEPLOY_PATH }} \
-           deploy_repo=${{ inputs.DEPLOY_REPO }} \
-           deploy_branch=${{ inputs.DEPLOY_BRANCH }}'
