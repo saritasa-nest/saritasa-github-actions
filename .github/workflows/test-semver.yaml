@@ -8,6 +8,7 @@ on:
 jobs:
   environment_test:
     strategy:
+      max-parallel: 2
       matrix:
         worker: [ubuntu-latest, windows-latest, [self-hosted, linux, x64], [self-hosted, macos, x64]]
     runs-on: ${{ matrix.worker }}
