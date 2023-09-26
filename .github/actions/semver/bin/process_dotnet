@@ -8,13 +8,11 @@
 
 # xmlstartlet is crucial for script
 # choco installs xmlstarlet as 'xml'
+$XMLSTARLET=xmlstarlet
 if [[ "${RUNNER_OS}" == "Windows" ]]; then
-    if ! [[ -x "$(command -v xml)" ]]; then
-        echo "error: xmlstarlet is not installed"
-        exit -1
-    fi
-    alias xmlstarlet=xml
-elif ! [[ -x "$(command -v xmlstarlet)" ]]; then
+    $XMLSTARLET=xml
+fi
+if ! [[ -x "$(command -v $XMLSTARLET)" ]]; then
     echo "error: xmlstarlet is not installed"
     exit -1
 fi
@@ -23,16 +21,16 @@ process_projectfile(){
     [[ -z $1 ]] && printf "No path for projectfile" && return 1
     printf "Processing %s:\n" "$1"
     printf "AssemblyVersion "
-    xmlstarlet ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n AssemblyVersion -v $ASSEMBLY_SEMVER "$1"
+    $XMLSTARLET ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n AssemblyVersion -v $ASSEMBLY_SEMVER "$1"
     printf "[updated];\n"
     printf "FileVersion "
-    xmlstarlet ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n FileVersion -v $ASSEMBLY_SEMVER "$1"
+    $XMLSTARLET ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n FileVersion -v $ASSEMBLY_SEMVER "$1"
     printf "[updated];\n"
     printf "InformationalVersion "
-    xmlstarlet ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n InformationalVersion -v $INFORM_VERSION "$1"
+    $XMLSTARLET ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n InformationalVersion -v $INFORM_VERSION "$1"
     printf "[updated];\n"
     printf "Version "
-    xmlstarlet ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n Version -v $SEMVER "$1"
+    $XMLSTARLET ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n Version -v $SEMVER "$1"
     printf "[updated];\n\n"
   }
 export -f process_projectfile
