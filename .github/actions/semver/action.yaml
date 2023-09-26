@@ -20,19 +20,15 @@ runs:
     - id: set-path
       shell: bash
       run: echo "${{ github.action_path }}/bin" >> $GITHUB_PATH
-    # - id: debug
-    #   shell: bash
-    #   if: ${{ inputs.debug == 'true' }}
-    #   run: |
-    #     echo "VERSIONING_DEBUG=true" >> "$GITHUB_ENV"
-    #     echo GITHUB_PATH=$GITHUB_PATH
-    #     echo PATH=$PATH
+    - id: debug
+      shell: bash
+      if: ${{ inputs.debug == 'true' }}
+      run: |
+        echo "VERSIONING_DEBUG=true" >> "$GITHUB_ENV"
     - id: version
       shell: bash
       run: |
         set -o pipefail
-        export PATH=$PATH:${{ github.action_path }}/bin
-        echo "$PATH"
         JSON=$(semver)
         if [[ -z ${JSON} ]]; then
           exit -1

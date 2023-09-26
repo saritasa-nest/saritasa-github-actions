@@ -9,7 +9,7 @@ jobs:
   environment_test:
     strategy:
       matrix:
-        worker: [ubuntu-latest, windows-latest, saritasa-rocks-eks, [self-hosted, macos, x64]]
+        worker: [ubuntu-latest, windows-latest, [self-hosted, linux, x64], [self-hosted, macos, x64]]
     runs-on: ${{ matrix.worker }}
     steps:
       - uses: actions/checkout@v3
