@@ -48,7 +48,7 @@ runs:
         if ! [[ -x "$(command -v xmlstarlet)" ]]; then
             echo "warning: xmlstarlet is not installed"
             if [[ "${RUNNER_OS}" == "Windows" ]]; then
-                choco install xmlstarlet jq
+                choco upgrade xmlstarlet jq
             elif [[ "${RUNNER_OS}" == "Linux" ]]; then
                 sudo apt update && sudo apt install xmlstarlet jq -y
             elif [[ "${RUNNER_OS}" == "macOS" ]]; then
