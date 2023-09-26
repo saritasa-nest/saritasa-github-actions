@@ -1,9 +1,6 @@
 name: Semver multi-workers test
 
-on:
-  push:
-    branches:
-      - 'action/semver'
+on: workflow_dispatch
     
 jobs:
   environment_test:
@@ -17,6 +14,8 @@ jobs:
         with:
           fetch-depth: 0
       - id: semver
-        uses: saritasa-nest/saritasa-github-actions/.github/actions/semver@action/semver
+        uses: ./.github/actions/semver
+        with:
+          process_dotnet: true
       - run: |
           echo "Computed version: ${{fromJson(steps.semver.outputs.version).InformationalVersion}}"
