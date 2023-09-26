@@ -7,6 +7,10 @@
 # semver | process_dotnet
 
 # xmlstartlet is crucial for script
+# choco installs xmlstarlet as 'xml'
+if [[ "${RUNNER_OS}" == "Windows" ]]; then
+    alias xmlstarlet=xml
+fi
 if ! [[ -x "$(command -v xmlstarlet)" ]]; then
     echo "error: xmlstarlet is not installed"
     exit -1
