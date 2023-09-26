@@ -5,12 +5,11 @@
 # Requires xmlstarlet version 1.6.1
 # Example usage:
 # semver | process_dotnet
-
-# xmlstartlet is crucial for script
-# choco installs xmlstarlet as 'xml'
 set -Euo pipefail
 shopt -s extglob
 
+# xmlstartlet is crucial for script
+# choco installs xmlstarlet as 'xml'
 if [[ "${RUNNER_OS}" == "Windows" ]]; then
     XMLSTARLET=xml
 else
@@ -60,7 +59,6 @@ if [[ -n "$JSON" && $? -eq 0 ]]; then
     export ASSEMBLY_SEMVER INFORM_VERSION SEMVER XMLSTARLET
     # Processing
     printf "Starting processing csproj files with:\nASSEMBLY_SEMVER=%s\nINFORM_VERSION=%s\nSEMVER=%s\n" "$ASSEMBLY_SEMVER" "$INFORM_VERSION" "$SEMVER"
-    printf '=%.0s' {1..15}; echo
     find . -type f -name "*.csproj" -exec bash -c "process_projectfile \"{}\"" \;
 else
     printf "Expected valid JSON as input"
