@@ -17,9 +17,9 @@ outputs:
 runs:
   using: "composite"
   steps:
-    # - id: set-path
-    #   shell: bash
-    #   run: echo ${{ github.action_path }}/bin >> $GITHUB_PATH
+    - id: set-path
+      shell: bash
+      run: echo "${{ github.action_path }}/bin" >> $GITHUB_PATH
     # - id: debug
     #   shell: bash
     #   if: ${{ inputs.debug == 'true' }}
@@ -32,6 +32,7 @@ runs:
       run: |
         set -o pipefail
         export PATH=$PATH:${{ github.action_path }}/bin
+        echo "$PATH"
         JSON=$(semver)
         if [[ -z ${JSON} ]]; then
           exit -1
