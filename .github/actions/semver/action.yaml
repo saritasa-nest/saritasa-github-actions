@@ -44,32 +44,15 @@ runs:
       shell: bash 
       run: |
         set -o pipefail
-
-        if ! [[ -x "$(command -v xmlstarlet)" ]]; then
-            echo "warning: xmlstarlet is not installed"
-            if [[ "${{runner.os}}" == "Windows" ]]; then
-                choco upgrade xmlstarlet
-            elif [[ "${{runner.os}}" == "Linux" ]]; then
-                sudo apt update && sudo apt install xmlstarlet -y
-            elif [[ "${{runner.os}}" == "macOS" ]]; then
-                brew install xmlstarlet
-            else
-                echo "Unknown RUNNER_OS:${{runner.os}}"
-                exit -1
-            fi
-        fi
-        if ! [[ -x "$(command -v jq)" ]]; then
-            echo "warning: jq is not installed"
-            if [[ "${{runner.os}}" == "Windows" ]]; then
-                choco upgrade jq
-            elif [[ "${{runner.os}}" == "Linux" ]]; then
-                sudo apt update && sudo apt install jq -y
-            elif [[ "${{runner.os}}" == "macOS" ]]; then
-                brew install jq
-            else
-                echo "Unknown RUNNER_OS:${{runner.os}}"
-                exit -1
-            fi
+        if [[ "${{runner.os}}" == "Windows" ]]; then
+            choco upgrade xmlstarlet jq
+        elif [[ "${{runner.os}}" == "Linux" ]]; then
+            sudo apt update && sudo apt install xmlstarlet jq -y
+        elif [[ "${{runner.os}}" == "macOS" ]]; then
+            brew install xmlstarlet jq
+        else
+            echo "Unknown RUNNER_OS:${{runner.os}}"
+            exit -1
         fi
         semver | process_dotnet
     - id: file
