@@ -9,9 +9,12 @@
 # xmlstartlet is crucial for script
 # choco installs xmlstarlet as 'xml'
 if [[ "${RUNNER_OS}" == "Windows" ]]; then
+    if ! [[ -x "$(command -v xml)" ]]; then
+        echo "error: xmlstarlet is not installed"
+        exit -1
+    fi
     alias xmlstarlet=xml
-fi
-if ! [[ -x "$(command -v xmlstarlet)" ]]; then
+elif ! [[ -x "$(command -v xmlstarlet)" ]]; then
     echo "error: xmlstarlet is not installed"
     exit -1
 fi
