@@ -1,5 +1,69 @@
 ## CI-wordpress reusable workflow
 
+### Deploying
+
+In order to deploy, you need to perform some steps:
+
+- Create a new playbook for deploying your app, for example, `deploy.yml`
+- Place the created playbook in your repository for example, `ci\ansible\deploy.yaml`
+- Set up variables for workflow (see Inputs Variables)
+- Create a workflow, configure workflow start triggers (see examles)
+
+If everything has been set up properly, after completing the workflow approximately the following structure will be created on the server.
+Check how the on your server folder structure would look like after one, two and three deployments.
+
+```
+-- /var/www/my-app.com
+|-- current -> /var/www/my-app.com/releases/20100509145325
+|-- releases
+|   |-- 20100509145325
+|-- shared
+```
+
+```
+-- /var/www/my-app.com
+|-- current -> /var/www/my-app.com/releases/20100509150741
+|-- releases
+|   |-- 20100509150741
+|   |-- 20100509145325
+|-- shared
+```
+
+```
+-- /var/www/my-app.com
+|-- current -> /var/www/my-app.com/releases/20100512131539
+|-- releases
+|   |-- 20100512131539
+|   |-- 20100509150741
+|   |-- 20100509145325
+|-- shared
+```
+
+### Rolling back
+
+In order to rollback, you need to set up the deployment and run the rollback workflow. Workflow, will switch the current folder to the previous release.
+
+Before rollback
+```
+-- /var/www/my-app.com
+|-- current -> /var/www/my-app.com/releases/20100512131539
+|-- releases
+|   |-- 20100512131539
+|   |-- 20100509150741
+|   |-- 20100509145325
+|-- shared
+```
+
+After rollback
+```
+-- /var/www/my-app.com
+|-- current -> /var/www/my-app.com/releases/20100509150741
+|-- releases
+|   |-- 20100509150741
+|   |-- 20100509145325
+|-- shared
+```
+
 ### Inputs variables
 
 | Variable       | Type          | Example                  | Discription                                                                                                       |
@@ -11,19 +75,21 @@
 | deploy_repo    | string        | git@github.com:saritasa-nest/ceai-wordpress.git | The path to deploy on the remote server                                                    |
 | deploy_branch  | string        | develop                  | The branch from which the deployment is made                                                                      |
 | python_version | number        | 3.11.4 | Each python version supports a certain range of ansible versions, so we need to specify the current version of python in order to install the latest version of ansible. |
-| runner         | string        | ubuntu-latest | The runner on which workflow is running: ubuntu, macos, windows, etc                                                         |
+| runner         | string        | saritasa-rocks-eks       | The runner on which workflow is running: ubuntu, macos, windows, etc                                              |
 
 ### Inputs secrets
 
-| Variable       | Discription                                                    |
-| ---------------|:---------------------------------------------------------------|
-| ssh_private_key | The private key for connect to production server via ssh      |
+| Variable        | Discription                                                    |
+| ----------------|:---------------------------------------------------------------|
+| ssh_private_key | The private key for connect to server via ssh                  |
 
 ### Examples
 
 #### Workflow for deploy
 
 This implementation is used in the [CEAI-Wordpress project](https://github.com/saritasa-nest/ceai-wordpress/tree/main/.github/workflows) project to deploy Wordpress on shared hosting.
+
+`ci-prod.yml`
 
 ```bash
 name: Deploy to Bluehost
@@ -32,17 +98,17 @@ on:
 
 jobs:
   deploy:
-    uses: saritasa-nest/saritasa-github-actions/.github/workflows/ci-wordpress.yaml@v2.4-dev.1
+    uses: saritasa-nest/saritasa-github-actions/.github/workflows/ci-wordpress.yaml@v2.4
     with:
       ENVIRONMENT: production                                      # The Environment for deploy
-      SERVER_HOST: 50.87.253.20                                    # The pruduction server
-      SSH_DEPLOY_USER: ${{ vars.SSH_DEPLOY_USER }}                 # The username for connect to production server via ssh
+      HOST: 50.87.253.20                                           # The server for deploy
+      USER: ${{ vars.SSH_DEPLOY_USER }}                            # The username for connect to server via ssh
       PLAYBOOK_PATH: ci/ansible/ansistrano-deploy.yml              # The path to the file relative to the repository from which the deployment is made
-      DEPLOY_PATH: ~/deploy/                                       # The path to deploy on the production server
+      DEPLOY_PATH: ~/deploy/                                       # The path to deploy on the server
       DEPLOY_REPO: git@github.com:saritasa-nest/ceai-wordpress.git # The repository for deploy
-      DEPLOY_BRANCH: develop                                       # The branche for deploy
+      DEPLOY_BRANCH: develop                                       # The branch for deploy
       PYTHON_VERSION: 3.11                                         # The version of python
-      RUNNER: ubuntu-latest                                        # The type of github runner
+      RUNNER: saritasa-rocks-eks                                   # The type of github runner
 
     secrets:
       ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -50,6 +116,8 @@ jobs:
 ```
 
 ### Ansistrano deploy playbook
+
+`ansistrano-deploy.yml`
 
 ```bash
 ---
@@ -93,6 +161,8 @@ jobs:
 
 #### Workflow for rollback for one step back
 
+`ci-rollback.yml`
+
 ```bash
 name: Rollback to Previously release
 on:
@@ -100,15 +170,15 @@ on:
 
 jobs:
   deploy:
-    uses: saritasa-nest/saritasa-github-actions/.github/workflows/ci-wordpress.yaml@v2.4-dev.1
+    uses: saritasa-nest/saritasa-github-actions/.github/workflows/ci-wordpress.yaml@v2.4
     with:
       ENVIRONMENT: production                                      # The Environment for deploy
-      SERVER_HOST: 50.87.253.20                                    # The pruduction server
-      SSH_DEPLOY_USER: ${{ vars.SSH_DEPLOY_USER }}                 # The username for connect to production server via ssh
-      PLAYBOOK_PATH: ci/ansible/ansistrano-rollback.yml              # The path to the file relative to the repository from which the deployment is made
-      DEPLOY_PATH: ~/deploy/                                       # The path to deploy on the production server
+      HOST: 50.87.253.20                                           # The remote server
+      USER: ${{ vars.SSH_DEPLOY_USER }}                            # The username for connect to server via ssh
+      PLAYBOOK_PATH: ci/ansible/ansistrano-rollback.yml            # The path to the file relative to the repository from which the deployment is made
+      DEPLOY_PATH: ~/deploy/                                       # The path to deploy on the server
       PYTHON_VERSION: 3.11                                         # The version of python
-      RUNNER: ubuntu-latest                                        # The type of github runner
+      RUNNER: saritasa-rocks-eks                                   # The type of github runner
 
     secrets:
       ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -116,6 +186,8 @@ jobs:
 ```
 
 ### Ansistrano rollback playbook
+
+`ansistrano-rollback.yml`
 
 ```bash
 ---

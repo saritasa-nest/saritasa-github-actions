@@ -1,7 +1,8 @@
-name: CI-Wordpress
+name: CI-Wordpress-Rollback
 
 # ----------------------------------------------------------------------------------------------------------
-# Pipeline rollback the release by one version on shared hosting by ansistrano ansible role
+# Pipeline to rollback the release by one version back.
+# In order to rollback release by one step back, you need to run this workflow.
 #
 # Original Author: Rostislav Udaltsov
 # Created: 09/25/2023
@@ -11,14 +12,14 @@ on:
   workflow_call:
     inputs:
       # Build configuration
-      server_host:
+      host:
         required: true
         type: string
         description: 'The address of the server'
-      ssh_deploy_user:
+      username:
         type: string
         required: true
-        description: 'The username for connect to production server via ssh'
+        description: 'The linux OS username for connect to server via ssh'
       environment:
         required: true
         type: string
@@ -30,20 +31,21 @@ on:
       deploy_path:
         required: true
         type: string
-        description: 'The path to deploy on the production server'
+        description: 'The path to deploy on the server'
       python_version:
         required: true
         type: number
         description: 'Specify the current version of Python to install the current version of ansible'
       runner:
-        required: true
+        required: false
         type: string
+        default: saritasa-rocks-eks
         description: 'The runner on which workflow is running'
     # Secrets for ssh
     secrets:
       ssh_private_key:
         required: true
-        description: 'The private key for connect to production server via ssh'
+        description: 'The private key for connect to server via ssh'
 
 jobs:
   deploy:
@@ -64,7 +66,7 @@ jobs:
 
       - name: Install Ansistrano roles
         run: |
-          ansible-galaxy install ansistrano.deploy ansistrano.rollback
+          ansible-galaxy install ansistrano.rollback
 
       # Adding private-key to ssh-agent
       - name: Set up ssh-agent
@@ -75,18 +77,18 @@ jobs:
       # Adding server ip to known_hosts
       - name: Update known_hosts
         run: |
-          ssh-keyscan -H ${{ inputs.server_host }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
 
-      # Deploy the project
+      # Rollback of the release
       - name: Ansistrano rollback
         env:
           # Environment variables for ansible must be in uppercase
-          ANSIBLE_GATHERING: 'smart'
-          ANSIBLE_PIPELINING: True
-          ANSIBLE_REMOTE_USER: ${{ inputs.SSH_DEPLOY_USER }}
+          ANSIBLE_GATHERING: False # Disabling the assembly of system information to speed up the workflow
+          ANSIBLE_PIPELINING: True # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
+          ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}
         run: |
           ansible-playbook -i \
-          ${{ inputs.SERVER_HOST }}, \
+          ${{ inputs.HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
           'deploy_path=${{ inputs.DEPLOY_PATH }} \
