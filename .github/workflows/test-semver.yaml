@@ -1,0 +1,21 @@
+name: Semver multi-workers test
+
+on:
+  push:
+    branches:
+      - 'action/semver'
+    
+jobs:
+  environment_test:
+    strategy:
+      matrix:
+        worker: [ubuntu-latest, windows-latest, saritasa-rocks-eks, [self-hosted, macos, x64]]
+    runs-on: ${{ matrix.worker }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - id: semver
+        uses: saritasa-nest/saritasa-github-actions/.github/actions/semver@action/semver
+      - run: |
+          echo "Computed version: ${{fromJson(steps.semver.outputs.version).InformationalVersion}}"
