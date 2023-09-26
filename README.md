@@ -174,7 +174,7 @@ jobs:
     with:
       ENVIRONMENT: production                                      # The Environment for deploy
       HOST: 50.87.253.20                                           # The remote server
-      USER: ${{ vars.SSH_DEPLOY_USER }}                            # The username for connect to server via ssh
+      USER: ${{ vars.SSH_DEPLOY_USER }}                            # The username to connect to server via ssh
       PLAYBOOK_PATH: ci/ansible/ansistrano-rollback.yml            # The path to the file relative to the repository from which the deployment is made
       DEPLOY_PATH: ~/deploy/                                       # The path to deploy on the server
       PYTHON_VERSION: 3.11                                         # The version of python
