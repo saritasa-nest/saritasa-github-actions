@@ -1,13 +1,23 @@
-## CI-wordpress reusable workflow
+# Workflows
+## android
+## asp.net
+## ios
+
+## wordpress
+### ci-wordpress reusable workflow
 
 ### Deploying
 
 In order to deploy, you need to perform some steps:
 
-- Create a new playbook for deploying your app, for example, `deploy.yml`
-- Place the created playbook in your repository for example, `ci\ansible\deploy.yaml`
-- Set up variables for workflow (see Inputs Variables)
+- Create a new workflow file for deploying your app, for example, [`deploy.yml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/.github/workflows/ci-prod.yml)
+- Place the created playbook in your repository for example, [`ci\ansible\deploy.yaml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/ci/ansible/ansistrano-rollback.yml)
+- Set up variables for workflow (see [Inputs Variables](#inputs-variables))
 - Create a workflow, configure workflow start triggers (see examles)
+
+Watch the [video](https://vimeo.com/manage/videos/869032249)
+
+During deployment, ansistrano looks at the current timestamp in runner by executing `date -u +%Y%m%d%H%M%SZ`. Each new release is placed in a folder with a name consisting of the previously received timestamp.
 
 If everything has been set up properly, after completing the workflow approximately the following structure will be created on the server.
 Check how the on your server folder structure would look like after one, two and three deployments.
@@ -42,6 +52,10 @@ Check how the on your server folder structure would look like after one, two and
 ### Rolling back
 
 In order to rollback, you need to set up the deployment and run the rollback workflow. Workflow, will switch the current folder to the previous release.
+- Create a new workflow file for rollback, for example, [`rollback.yml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/.github/workflows/ci-rollback.yml)
+- Place the created playbook in your repository for example, [`ci\ansible\rollback.yaml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/ci/ansible/ansistrano-deploy.yml)
+
+Watch the [video](https://vimeo.com/manage/videos/869032751)
 
 Before rollback
 ```
@@ -86,6 +100,8 @@ After rollback
 ### Examples
 
 #### Workflow for deploy
+
+Watch the [video](https://vimeo.com/manage/videos/869032249)
 
 This implementation is used in the [CEAI-Wordpress project](https://github.com/saritasa-nest/ceai-wordpress/tree/main/.github/workflows) project to deploy Wordpress on shared hosting.
 
@@ -161,6 +177,8 @@ jobs:
 
 #### Workflow for rollback for one step back
 
+Watch the [video](https://vimeo.com/manage/videos/869032751)
+
 `ci-rollback.yml`
 
 ```bash
@@ -182,7 +200,6 @@ jobs:
 
     secrets:
       ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-
 ```
 
 ### Ansistrano rollback playbook

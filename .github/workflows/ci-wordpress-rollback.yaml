@@ -1,8 +1,10 @@
-name: CI-Wordpress-Rollback
+name: ci-wordpress-rollback
 
 # ----------------------------------------------------------------------------------------------------------
 # Pipeline to rollback the release by one version back.
 # In order to rollback release by one step back, you need to run this workflow.
+# During the workflow, a symbolic link pointing to the current release version will switch to the previous release version.
+# During release delivery, a folder is created with a timestamp corresponding to when the release was delivered.
 #
 # Original Author: Rostislav Udaltsov
 # Created: 09/25/2023
@@ -83,8 +85,11 @@ jobs:
       - name: Ansistrano rollback
         env:
           # Environment variables for ansible must be in uppercase
-          ANSIBLE_GATHERING: False # Disabling the assembly of system information to speed up the workflow
-          ANSIBLE_PIPELINING: True # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
+          # Disabling the assembly of system information to speed up the workflow (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_GATHERING)
+          ANSIBLE_GATHERING: False
+          # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
+          ANSIBLE_PIPELINING: True
+          # User for connect via ssh (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_REMOTE_USER)
           ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}
         run: |
           ansible-playbook -i \
