@@ -112,7 +112,7 @@ _get_branch_name(){
 #	None
 # Output:
 #	Commit weight as natural number
-_get_commit_weigh(){
+_get_commit_weight(){
 	git rev-list --count HEAD --no-merges --first-parent
 }
 
@@ -219,7 +219,7 @@ get_version_for_release_branch(){
 	DESCRIPTION="Release branch"
 	SUFFIX="-beta"
 	MMP=${BASH_REMATCH[1]}
-	BUILD=$(_get_commit_weigh)
+	BUILD=$(_get_commit_weight)
 }
 
 #######################################
@@ -245,7 +245,7 @@ get_version_for_hotfix_branch(){
 	IFS='.' read -ra MMP_ARRAY <<< "$MMP_TAG"
 	((MMP_ARRAY[2]=MMP_ARRAY[2]+1))
 	MMP=$(join_by . "${MMP_ARRAY[@]}")
-	BUILD=$(_get_commit_weigh)
+	BUILD=$(_get_commit_weight)
 	# postfix validation as suffix
 	if [[ $BRANCH =~ ^hotfix\/(.*)$ ]]; then
 		SUFFIX="-${BASH_REMATCH[1]}"
@@ -282,7 +282,7 @@ get_version_for_staging_branch(){
 	(( MMP_ARRAY[1]=MMP_ARRAY[1]+1 ))
 	MMP_ARRAY[2]=0
 	MMP=$(join_by . "${MMP_ARRAY[@]}")
-	BUILD=$(_get_commit_weigh)
+	BUILD=$(_get_commit_weight)
 	DESCRIPTION="Staging branch"
 	SUFFIX="-staging"
 }
@@ -314,7 +314,7 @@ get_version_for_development_branch(){
 	(( MMP_ARRAY[1]=MMP_ARRAY[1]+1 ))
 	MMP_ARRAY[2]=0
 	MMP=$(join_by . "${MMP_ARRAY[@]}")
-	BUILD=$(_get_commit_weigh)
+	BUILD=$(_get_commit_weight)
 
 	if [[ $BRANCH == develop ]]; then
 		DESCRIPTION="Develop branch"
