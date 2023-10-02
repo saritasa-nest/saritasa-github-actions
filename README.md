@@ -49,6 +49,10 @@ Check how the on your server folder structure would look like after one, two and
 |-- shared
 ```
 
+current - The symlink folder that point out to latest release's timestamp that exist in release folder
+releases - The folder where the releases are saved. This folder will have a few folders depend on how many release we want to keep before the clean up process occured
+shared - This folder contains shareable files that we can re-used between release. This files should **not get into the repository**, but are necessary for the work of the Wordpress
+
 ### Rolling back
 
 In order to rollback, you need to set up the deployment and run the rollback workflow. Workflow, will switch the current folder to the previous release.
@@ -82,10 +86,11 @@ After rollback
 
 | Variable       | Type          | Example                  | Discription                                                                                                       |
 | ---------------|:-------------:| :------------------------|-------------------------------------------------------------------------------------------------------------------|
-| server_host    | string        | 59.128.16.24             | The address of the server for deploy                                                                              |
+| host           | string        | 59.128.16.24             | The address of the server for deploy                                                                              |
+| username       | string        | user                     | The linux OS username for connect to server via ssh                                                               |
 | environment    | string        | production               | The environment for deploy i.e development, staging, production                                                   |
 | playbook_path  | string        | ci/ansible/playbook.yaml | The path to the file relative to the repository from which the deployment is made, used in Ansistrano deploy task |
-| deploy_path    | string        | ~/deploy/                | The path to deploy on the remote server                                                                           |
+| deploy_path    | string        | ~/deploy                 | The path to deploy on the remote server                                                                           |
 | deploy_repo    | string        | git@github.com:saritasa-nest/ceai-wordpress.git | The path to deploy on the remote server                                                    |
 | deploy_branch  | string        | develop                  | The branch from which the deployment is made                                                                      |
 | python_version | number        | 3.11.4 | Each python version supports a certain range of ansible versions, so we need to specify the current version of python in order to install the latest version of ansible. |
