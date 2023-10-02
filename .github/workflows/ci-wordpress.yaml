@@ -93,7 +93,7 @@ jobs:
           # This setting controls the default policy of fact gathering (facts discovered about remote systems).
           # This option can be useful for those wishing to save fact gathering time. Both ‘smart’ and ‘explicit’ will use the cache plugin.
           # Disabling the assembly of system information to speed up the workflow (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_GATHERING)
-          ANSIBLE_GATHERING: False
+          ANSIBLE_GATHERING: 'smart'
           # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
           ANSIBLE_PIPELINING: True
           ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}

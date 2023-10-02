@@ -86,7 +86,7 @@ jobs:
         env:
           # Environment variables for ansible must be in uppercase
           # Disabling the assembly of system information to speed up the workflow (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_GATHERING)
-          ANSIBLE_GATHERING: False
+          ANSIBLE_GATHERING: 'smart'
           # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
           ANSIBLE_PIPELINING: True
           # User for connect via ssh (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_REMOTE_USER)
