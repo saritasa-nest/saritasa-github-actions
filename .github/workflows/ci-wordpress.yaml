@@ -102,7 +102,7 @@ jobs:
           ${{ inputs.HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
-          'ansistrano_release_version=`date -u +%Y-%m-%d-%H%M%SZ`
+          'ansistrano_release_version=`date -u +%Y-%m-%d-%H%M%SZ` \
            deploy_path=${{ inputs.DEPLOY_PATH }} \
            deploy_repo=${{ inputs.DEPLOY_REPO }} \
            deploy_branch=${{ inputs.DEPLOY_BRANCH }}'
