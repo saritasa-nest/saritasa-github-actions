@@ -1,7 +1,7 @@
 name: Semver multi-workers test
 
 on: workflow_dispatch
-    
+
 jobs:
   environment_test:
     strategy:

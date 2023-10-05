@@ -2,12 +2,15 @@ name: 'semver'
 description: 'Provides sevmer output for current git repo'
 inputs:
   debug:
+    description: Enable verbose output for semver command
     required: false
     default: false
   file:
+    description: Target file for json output
     required: false
     default: ''
   process_dotnet:
+    description: Boolean flag for dotnet 'csproj' files processing
     required: false
     default: false
 outputs:
@@ -32,16 +35,15 @@ runs:
         JSON=$(semver)
         if [[ -z ${JSON} ]]; then
           exit -1
-        else
-          echo "json=${JSON}" >> $GITHUB_OUTPUT
         fi
+        echo "json=${JSON}" >> $GITHUB_OUTPUT
     - id: result
       shell: bash
       run: |
         echo "Building ${{fromJson(steps.version.outputs.json).SemVer}}"
     - id: dotnet
       if: ${{ inputs.process_dotnet == 'true' }}
-      shell: bash 
+      shell: bash
       run: |
         set -o pipefail
         if [[ "${{runner.os}}" == "Windows" ]]; then
@@ -60,5 +62,3 @@ runs:
       if: inputs.file != ''
       run: |
         echo "${{steps.version.outputs.json}}" >> ${{inputs.file}}
-
-      
