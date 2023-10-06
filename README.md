@@ -15,7 +15,8 @@ In order to deploy, you need to perform some steps:
 - Set up variables for workflow (see [Inputs Variables](#inputs-variables))
 - Create a workflow, configure workflow start triggers (see examles)
 
-Watch the [video](https://vimeo.com/manage/videos/869032249)
+Watch the [ru video](https://vimeo.com/manage/videos/869032249)
+Watch the [en video](https://vimeo.com/manage/videos/871687786)
 
 During deployment, ansistrano looks at the current timestamp in runner by executing `date -u +%Y%m%d%H%M%SZ`. Each new release is placed in a folder with a name consisting of the previously received timestamp.
 
@@ -59,7 +60,8 @@ In order to rollback, you need to set up the deployment and run the rollback wor
 - Create a new workflow file for rollback, for example, [`rollback.yml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/.github/workflows/ci-rollback.yml)
 - Place the created playbook in your repository for example, [`ci\ansible\rollback.yaml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/ci/ansible/ansistrano-deploy.yml)
 
-Watch the [video](https://vimeo.com/manage/videos/869032751)
+Watch the [ru video](https://vimeo.com/manage/videos/869032751)
+Watch the [en video](https://vimeo.com/manage/videos/871687786)
 
 Before rollback
 ```
@@ -106,7 +108,8 @@ After rollback
 
 #### Workflow for deploy
 
-Watch the [video](https://vimeo.com/manage/videos/869032249)
+Watch the [ru video](https://vimeo.com/manage/videos/869032249)
+Watch the [en video](https://vimeo.com/manage/videos/871687786)
 
 This implementation is used in the [CEAI-Wordpress project](https://github.com/saritasa-nest/ceai-wordpress/tree/main/.github/workflows) project to deploy Wordpress on shared hosting.
 
@@ -182,7 +185,8 @@ jobs:
 
 #### Workflow for rollback for one step back
 
-Watch the [video](https://vimeo.com/manage/videos/869032751)
+Watch the [ru video](https://vimeo.com/manage/videos/869032751)
+Watch the [en video](https://vimeo.com/manage/videos/871687786)
 
 `ci-rollback.yml`
 
