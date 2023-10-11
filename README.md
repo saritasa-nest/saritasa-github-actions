@@ -149,16 +149,15 @@ jobs:
   hosts: all
   vars:
     ansistrano_keep_releases: 10
-    ansistrano_deploy_from: "{{ playbook_dir }}/.."
+    ansistrano_deploy_from: "{{ playbook_dir }}/../.."
     ansistrano_deploy_to: "{{ deploy_path }}"
     ansistrano_git_repo: "{{ deploy_repo }}"
     ansistrano_git_branch: "{{ deploy_branch }}"
-    ansistrano_deploy_via: "git"
+    ansistrano_deploy_via: "rsync"
+    ansistrano_rsync_set_remote_user: yes
     ansistrano_git_depth: 1
     ansistrano_shared_paths:
       - wp-content/uploads
-      - .well-known
-      - cgi-bin
     ansistrano_shared_files:
       - wp-config.php
       - .htaccess
@@ -176,6 +175,8 @@ jobs:
 `ansistrano_git_branch` what version of the repository to check out. This can be the full 40-character SHA-1 hash, the literal string HEAD, a branch name, or a tag name
 
 `ansistrano_deploy_via` deployment strategy - method used to deliver code. Options are copy, download, git, rsync, rsync_direct, svn, or s3.
+
+`ansistrano_rsync_set_remote_user` allows the use of the module synchronize of ansible. See official [docs](https://docs.ansible.com/ansible/latest/collections/ansible/posix/synchronize_module.html)
 
 `ansistrano_git_depth` additional history truncated to the specified number or revisions
 
@@ -226,3 +227,18 @@ jobs:
 ```
 
 More information for adnsistrano playbook in official [docs](https://github.com/ansistrano/deploy/blob/master/README.md)
+
+### Synchronization of client changes
+
+In the process of working with the website, the client can install, change settings and add modules using the Wordpress web interface.
+In order for these changes to appear in the repository, it is necessary to commit from the `current` folder, i.e. perform the following actions (for the example described above):
+
+```bash
+cd ~/deploy/current
+```
+
+```bash
+git add . && \
+git commit -m 'Commit message' && \
+git push
+```
