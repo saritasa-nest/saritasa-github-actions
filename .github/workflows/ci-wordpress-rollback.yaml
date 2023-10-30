@@ -1,0 +1,99 @@
+name: ci-wordpress-rollback
+
+# ----------------------------------------------------------------------------------------------------------
+# Pipeline to rollback the release by one version back.
+# In order to rollback release by one step back, you need to run this workflow.
+# During the workflow, a symbolic link pointing to the current release version will switch to the previous release version.
+# During release delivery, a folder is created with a timestamp corresponding to when the release was delivered.
+#
+# Original Author: Rostislav Udaltsov
+# Created: 09/25/2023
+# ----------------------------------------------------------------------------------------------------------
+
+on:
+  workflow_call:
+    inputs:
+      # Build configuration
+      host:
+        required: true
+        type: string
+        description: 'The address of the server'
+      username:
+        type: string
+        required: true
+        description: 'The linux OS username for connect to server via ssh'
+      environment:
+        required: true
+        type: string
+        description: 'The environment'
+      playbook_path:
+        required: true
+        type: string
+        description: 'The path to the file relative to the repository from which the deployment is made'
+      deploy_path:
+        required: true
+        type: string
+        description: 'The path to deploy on the server'
+      python_version:
+        required: true
+        type: number
+        description: 'Specify the current version of Python to install the current version of ansible'
+      runner:
+        required: false
+        type: string
+        default: saritasa-rocks-eks
+        description: 'The runner on which workflow is running'
+    # Secrets for ssh
+    secrets:
+      ssh_private_key:
+        required: true
+        description: 'The private key for connect to server via ssh'
+
+jobs:
+  deploy:
+    runs-on: ${{ inputs.runner }}
+
+    steps:
+      # Preparing workspace: install python, ansible and ansistrano-role
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4.7.0
+        with:
+          python-version: ${{ inputs.PYTHON_VERSION }}
+
+      - name: Install Ansible
+        run: |
+          pip install ansible requests jinja2
+
+      - name: Install Ansistrano roles
+        run: |
+          ansible-galaxy install ansistrano.rollback
+
+      # Adding private-key to ssh-agent
+      - name: Set up ssh-agent
+        uses: webfactory/ssh-agent@v0.5.2
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Adding server ip to known_hosts
+      - name: Update known_hosts
+        run: |
+          ssh-keyscan -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
+
+      # Rollback of the release
+      - name: Ansistrano rollback
+        env:
+          # Environment variables for ansible must be in uppercase
+          # Disabling the assembly of system information to speed up the workflow (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_GATHERING)
+          ANSIBLE_GATHERING: 'smart'
+          # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
+          ANSIBLE_PIPELINING: True
+          # User for connect via ssh (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_REMOTE_USER)
+          ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}
+        run: |
+          ansible-playbook -i \
+          ${{ inputs.HOST }}, \
+          ${{ inputs.PLAYBOOK_PATH }} \
+          --extra-vars \
+          'deploy_path=${{ inputs.DEPLOY_PATH }} \
