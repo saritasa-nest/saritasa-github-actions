@@ -113,7 +113,7 @@ _get_branch_name(){
 # Output:
 #	Commit weight as natural number
 _get_commit_weight(){
-	git rev-list --count HEAD --no-merges --first-parent
+	git rev-list --count HEAD --first-parent
 }
 
 
