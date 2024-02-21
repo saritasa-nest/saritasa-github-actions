@@ -1,0 +1,21 @@
+name: Semver multi-workers test
+
+on: workflow_dispatch
+
+jobs:
+  environment_test:
+    strategy:
+      max-parallel: 2
+      matrix:
+        worker: [ubuntu-latest, windows-latest, [self-hosted, linux, x64], [self-hosted, macos, x64]]
+    runs-on: ${{ matrix.worker }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - id: semver
+        uses: ./.github/actions/semver
+        with:
+          process_dotnet: true
+      - run: |
+          echo "Computed version: ${{fromJson(steps.semver.outputs.version).InformationalVersion}}"

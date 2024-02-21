@@ -1,0 +1,64 @@
+name: 'semver'
+description: 'Provides sevmer output for current git repo'
+inputs:
+  debug:
+    description: Enable verbose output for semver command
+    required: false
+    default: false
+  file:
+    description: Target file for json output
+    required: false
+    default: ''
+  process_dotnet:
+    description: Boolean flag for dotnet 'csproj' files processing
+    required: false
+    default: false
+outputs:
+  version:
+    description: Json based string with version values
+    value: ${{ steps.version.outputs.json}}
+runs:
+  using: "composite"
+  steps:
+    - id: set-path
+      shell: bash
+      run: echo "${{ github.action_path }}/bin" >> $GITHUB_PATH
+    - id: debug
+      shell: bash
+      if: ${{ inputs.debug == 'true' }}
+      run: |
+        echo "VERSIONING_DEBUG=true" >> "$GITHUB_ENV"
+    - id: version
+      shell: bash
+      run: |
+        set -o pipefail
+        JSON=$(semver)
+        if [[ -z ${JSON} ]]; then
+          exit -1
+        fi
+        echo "json=${JSON}" >> $GITHUB_OUTPUT
+    - id: result
+      shell: bash
+      run: |
+        echo "Building ${{fromJson(steps.version.outputs.json).SemVer}}"
+    - id: dotnet
+      if: ${{ inputs.process_dotnet == 'true' }}
+      shell: bash
+      run: |
+        set -o pipefail
+        if [[ "${{runner.os}}" == "Windows" ]]; then
+            choco upgrade xmlstarlet jq
+        elif [[ "${{runner.os}}" == "Linux" ]]; then
+            sudo apt update && sudo apt install xmlstarlet jq -y
+        elif [[ "${{runner.os}}" == "macOS" ]]; then
+            brew install xmlstarlet jq
+        else
+            echo "Unknown RUNNER_OS:${{runner.os}}"
+            exit -1
+        fi
+        semver | process_dotnet
+    - id: file
+      shell: bash
+      if: inputs.file != ''
+      run: |
+        echo "${{steps.version.outputs.json}}" >> ${{inputs.file}}
