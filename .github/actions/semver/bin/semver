@@ -134,13 +134,14 @@ _get_commit_weight(){
 get_MMP_TAG(){
 	local LOG_PREFIX="get_MMP_TAG: "
 	local BRANCH=${1:-HEAD}
+	local MAIN_BRANCH=$(_get_main_branch_name)
 	local TAG
 	if [[ $BRANCH =~ main|master ]]; then
 		pecho "Processing \"$BRANCH\" as main branch"
 		TAG="$(git tag --sort='-creatordate' --merged $BRANCH 2>/dev/null || echo "")"
 	else
 		pecho "Processing \"$BRANCH\" as non-main branch"
-		TAG=$(git tag --sort='-creatordate' --merged $BRANCH --no-merged main 2>/dev/null || echo "")
+		TAG=$(git tag --sort='-creatordate' --merged $BRANCH --no-merged $MAIN_BRANCH 2>/dev/null || echo "")
 	fi
 
 	if [[ -z $TAG ]]; then
