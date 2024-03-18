@@ -101,7 +101,14 @@ _get_main_branch_name(){
 # Output:
 #	Branch name
 _get_branch_name(){
-	git rev-parse --abbrev-ref HEAD
+	LOG_PREFIX="get_branch_name:"
+	BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+	if [[ $BRANCH == HEAD ]]; then
+		pecho "We are in detached HEAD state, digging deeper"
+		BRANCH="$(git --no-pager show -s --pretty=%D HEAD | awk -F, '{print $NF}' | tr -d ' ' | sed 's/origin\///')"
+	fi
+	pecho "Found \"$BRANCH\" branch"
+	echo $BRANCH
 }
 
 #######################################
