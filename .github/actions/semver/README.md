@@ -41,7 +41,7 @@ Image below is editable via draw.io
 - id: semver
   uses: saritasa-nest/saritasa-github-actions/.github/actions/semver
   with:
-    dotnet_process: true
+    process_dotnet: true
 - run: dotnet publish "src/App.csproj" -c Debug -o build
 ```
 ## File 
