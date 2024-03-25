@@ -73,9 +73,6 @@ runs:
       run: |
         echo "${{ inputs.google_services_json }}" > fastlane/google-services.json
     # Execute lane from Fastfile
-    - name: android SDK tree
-      shell: bash
-      run: tree -L 3 /home/runner/.android/
     - name: Execute fastlane target
       shell: bash
       run: bundle exec fastlane android ${{ inputs.target }} --env ${{ inputs.environment }}
