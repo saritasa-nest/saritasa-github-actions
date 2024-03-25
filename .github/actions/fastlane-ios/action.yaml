@@ -10,7 +10,7 @@ inputs:
   # Optional
   ruby_version:
     required: false
-    default: '3.0'
+    default: '3.0.0'
   bundler_version:
     description: Option for 'gem install` command
     required: false
@@ -36,17 +36,25 @@ runs:
   using: "composite"
   steps:
     # Setup ruby on github hosted machines, step fails on self-hosted macjenkins
-    - name: Setup ruby
+    - name: Setup ruby on hosted agent
       if: ${{ runner.name == 'Hosted Agent' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
         bundler-cache: true
+    - name: Setup ruby on self-hosted agent
+      if: ${{ runner.name != 'Hosted Agent' }}
+      shell: bash
+      run: |
+        eval "$(rbenv init - bash)"
+        rbenv install -s ${{ inputs.ruby_version }}
+        rbenv local ${{ inputs.ruby_version }}
     # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
       shell: bash
       run: |
         gem install bundler:${{ inputs.bundler_version }}
+        bundle config set --local path '.bundle'
         bundle install --jobs 4 --retry 3
     # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
     - name: Update ci keychain for iOS
