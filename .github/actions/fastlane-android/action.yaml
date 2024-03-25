@@ -41,7 +41,7 @@ runs:
   steps:
     # Setup step fails on self-hosted macjenkins
     - name: Setup ruby
-      if: ${{ runner.name != 'macjenkins3-v2' && runner.name != 'macjenkins3-v3' }}
+      if: ${{ runner.platform != 'darwin' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
@@ -51,6 +51,8 @@ runs:
       with:
         distribution: ${{ inputs.java_distribution }}
         java-version: ${{ inputs.java_version }}
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
     # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
       shell: bash
@@ -74,3 +76,7 @@ runs:
     - name: Execute fastlane target
       shell: bash
       run: bundle exec fastlane android ${{ inputs.target }} --env ${{ inputs.environment }}
+      env:
+        LC_ALL: en_US.UTF-8
+        LANG: en_US.UTF-8
+
