@@ -37,14 +37,6 @@ inputs:
     description: Option of action/setup-java@v4
     required: false
     default: '11'
-  android_buildtools_version:
-    description: Version for build-tools package of android-actions/setup-android@v3
-    required: false
-    default: 34.0.0
-  android_platform_version:
-    description: Version for platform package of android-actions/setup-android@v3
-    required: false
-    default: 34
 runs:
   using: "composite"
   steps:
@@ -62,15 +54,14 @@ runs:
         java-version: ${{ inputs.java_version }}
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-#      with:
-#        packages: tools platform-tools "build-tools;${{ inputs.android_buildtools_version }}" "android-${{ inputs.android_platform_version }}"
     # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
       shell: bash
       run: |
         gem install bundler:${{ inputs.bundler_version }}
         bundle install --jobs 4 --retry 3
-    # "Provision keystore for sign from github secret and replace env vars with new values, see more: https://developer.android.com/training/articles/keystore"
+    # "Provision keystore for sign from github secret and replace env vars with new values,
+    # see more: https://developer.android.com/training/articles/keystore"
     - name: Provision ci keystore for Android
       if: ${{ inputs.keystore != '' }}
       shell: bash
