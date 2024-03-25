@@ -9,6 +9,7 @@ inputs:
     required: true
   # Optional
   ruby_version:
+    description: Version for ruby/setup-ruby@v1
     required: false
     default: '3.0'
   bundler_version:
@@ -36,6 +37,10 @@ inputs:
     description: Option of action/setup-java@v4
     required: false
     default: '11'
+  android_version:
+    description: Version for build-tools package of android-actions/setup-android@v3
+    required: false
+    default: 23.0.0
 runs:
   using: "composite"
   steps:
@@ -53,6 +58,8 @@ runs:
         java-version: ${{ inputs.java_version }}
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+      with:
+        packages: build-tools;${{ inputs.android_version }}
     # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
       shell: bash
@@ -79,5 +86,4 @@ runs:
       env:
         LC_ALL: en_US.UTF-8
         LANG: en_US.UTF-8
-        ANDROID_HOME: /home/runner/.android/sdk/
 
