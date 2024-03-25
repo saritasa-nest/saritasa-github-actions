@@ -62,8 +62,8 @@ runs:
         java-version: ${{ inputs.java_version }}
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-      with:
-        packages: tools platform-tools "build-tools;${{ inputs.android_buildtools_version }}" "platform;${{ inputs.android_platform_version }}"
+#      with:
+#        packages: tools platform-tools "build-tools;${{ inputs.android_buildtools_version }}" "android-${{ inputs.android_platform_version }}"
     # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
       shell: bash
