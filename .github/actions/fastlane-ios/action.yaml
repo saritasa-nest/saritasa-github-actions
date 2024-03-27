@@ -53,7 +53,9 @@ runs:
     - name: Setup dependencies
       shell: bash
       run: |
+        gem env
         gem install bundler:${{ inputs.bundler_version }}
+        bundler env
         bundle config set --local path '.bundle'
         bundle install --jobs 4 --retry 3
     # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
