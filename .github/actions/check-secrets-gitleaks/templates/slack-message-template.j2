@@ -1,0 +1,10 @@
+{% if file_names %}
+*Exposed secrets found in github <https://github.com/{{github.repository}}/commit/{{github.sha}}|commit> by <https://github.com/{{github.actor}}|{{github.actor}}>*
+*File list:*
+{% for file in file_names %}
+  ・<https://github.com/{{github.repository}}/blob/{{github.ref}}/{{file}}|{{file}}>
+{% endfor %}
+{% if github.event.name == 'pull_request' %}
+  *Current <https://github.com/{{github.repository}}/pull/{{github.event.number}}|PR>*
+{% endif %}
+{% endif %}
