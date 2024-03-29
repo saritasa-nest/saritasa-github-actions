@@ -1,0 +1,73 @@
+name: gitleaks
+description: "gitleaks check finds the unencrypted secrets"
+inputs:
+  GITHUB_TOKEN:
+    description: "gitHub token secret"
+    required: true
+  GITLEAKS_LICENSE:
+    description: "gitleaks license secret"
+    required: true
+  GITLEAKS_SLACK_WEBHOOK:
+    description: "slack webhook secret for team-devops-expose-secrets channel"
+    required: true
+  GITLEAKS_FAILURE_SLACK_WEBHOOK:
+    description: "slack webhook secret for team-devops-gitleaks-failure channel"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - uses: gitleaks/gitleaks-action@v2
+      id: gitleaks
+      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{inputs.GITHUB_TOKEN}}
+        GITLEAKS_LICENSE: ${{inputs.GITLEAKS_LICENSE}} 
+    - name: variables for jinja
+      shell: bash
+      run: |
+        jq -n \
+          --argjson file_names "$(jq -r '.runs[0].results[].locations[].physicalLocation.artifactLocation.uri' results.sarif | \
+          sort -u | jq -R -s 'split("\n")[:-1]')" \
+          --arg repository "${{github.repository}}" \
+          --arg ref "${{github.ref}}" \
+          --arg sha "${{github.sha}}" \
+          --arg actor "${{github.actor}}" \
+          --arg event_name "${{github.event_name}}" \
+          --arg event_number "${{github.event.number}}" \
+          '{file_names: $file_names, github: {repository: $repository, ref: $ref, sha: $sha, actor: $actor, event: {name: $event_name, number: $event_number}}}' \
+          > variables.json
+    - name: receiving the generated message
+      uses: cuchi/jinja2-action@v1.2.2
+      with:
+        template: .github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
+        output_file: slack_message.md
+        data_file: variables.json
+    - name: sending a message to GITHUB_OUTPUT
+      shell: bash
+      id: message
+      run: |
+        echo 'slack-message<<EOF' >> $GITHUB_OUTPUT
+        echo "$(cat slack_message.md)" >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT         
+    - name: notify about leaked secrets
+      if: steps.message.outputs.slack-message != ''
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_CHANNEL: team-devops-expose-secrets
+        SLACK_WEBHOOK: ${{inputs.GITLEAKS_SLACK_WEBHOOK}}
+        SLACK_COLOR: '#cc0000'
+        SLACK_MESSAGE: ${{steps.message.outputs.slack-message}}
+        SLACK_TITLE: " "
+        SLACK_FOOTER: Saritasa
+        MSG_MINIMAL: true
+    - name: notify about failure steps
+      uses: rtCamp/action-slack-notify@v2
+      if:  failure()
+      env:
+        SLACK_CHANNEL: team-devops-gitleaks-failure
+        SLACK_WEBHOOK: ${{inputs.GITLEAKS_FAILURE_SLACK_WEBHOOK}}
+        SLACK_COLOR: '#cc0000'
+        SLACK_MESSAGE: '*workflow failed with an error*'
+        SLACK_TITLE: " "
+        SLACK_FOOTER: Saritasa
+        MSG_MINIMAL: actions url
