@@ -45,10 +45,11 @@ runs:
           --arg event_number "${{github.event.number}}" \
           '{file_names: $file_names, github: {repository: $repository, ref: $ref, sha: $sha, actor: $actor, event: {name: $event_name, number: $event_number}}}' \
           > variables.json
+        echo ${{github.action_path}}
     - name: receiving the generated message
       uses: cuchi/jinja2-action@v1.2.2
       with:
-        template: test/.github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
+        template: home//.github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
         output_file: slack_message.md
         data_file: variables.json
     - name: sending a message to GITHUB_OUTPUT
