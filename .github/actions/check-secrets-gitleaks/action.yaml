@@ -19,6 +19,12 @@ runs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+    - name: Checkout other repository
+      uses: actions/checkout@v4
+      with:
+        repository: saritasa-nest/saritasa-github-actions
+        path: test
+        ref: feature/gitleaks
     - uses: gitleaks/gitleaks-action@v2
       id: gitleaks
       continue-on-error: true
