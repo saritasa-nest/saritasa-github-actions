@@ -48,7 +48,7 @@ runs:
     - name: receiving the generated message
       uses: cuchi/jinja2-action@v1.2.2
       with:
-        template: .github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
+        template: test/.github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
         output_file: slack_message.md
         data_file: variables.json
     - name: sending a message to GITHUB_OUTPUT
