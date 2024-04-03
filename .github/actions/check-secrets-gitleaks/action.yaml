@@ -23,7 +23,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: saritasa-nest/saritasa-github-actions
-        path: test
+        path: data
         ref: feature/gitleaks
     - uses: gitleaks/gitleaks-action@v2
       id: gitleaks
@@ -45,12 +45,10 @@ runs:
           --arg event_number "${{github.event.number}}" \
           '{file_names: $file_names, github: {repository: $repository, ref: $ref, sha: $sha, actor: $actor, event: {name: $event_name, number: $event_number}}}' \
           > variables.json
-        cat /home/runner/_work/_actions/saritasa-nest/saritasa-github-actions/v.2.5-dev.2/.github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
-        pwd
     - name: receiving the generated message
       uses: cuchi/jinja2-action@v1.2.2
       with:
-        template: /home/runner/_work/saritasa-github-actions/saritasa-github-actions/v.2.5-dev.2/.github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
+        template: data/.github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
         output_file: slack_message.md
         data_file: variables.json
     - name: sending a message to GITHUB_OUTPUT
