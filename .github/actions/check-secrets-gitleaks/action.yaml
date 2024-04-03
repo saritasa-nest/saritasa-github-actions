@@ -45,7 +45,7 @@ runs:
           --arg event_number "${{github.event.number}}" \
           '{file_names: $file_names, github: {repository: $repository, ref: $ref, sha: $sha, actor: $actor, event: {name: $event_name, number: $event_number}}}' \
           > variables.json
-        cat ${{github.action_path}}/templates/slack-message-template.j2
+        cat /home/runner/_work/_actions/saritasa-nest/saritasa-github-actions/v.2.5-dev.2/.github/actions/check-secrets-gitleaks/templates/slack-message-template.j2
     - name: receiving the generated message
       uses: cuchi/jinja2-action@v1.2.2
       with:
