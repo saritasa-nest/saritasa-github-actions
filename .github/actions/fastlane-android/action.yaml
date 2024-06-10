@@ -59,7 +59,7 @@ runs:
       shell: bash
       run: |
         gem install bundler:${{ inputs.bundler_version }}
-        bundle install --jobs 4 --retry 3
+        bundler install --jobs 4 --retry 3
     # "Provision keystore for sign from github secret and replace env vars with new values,
     # see more: https://developer.android.com/training/articles/keystore"
     - name: Provision ci keystore for Android
