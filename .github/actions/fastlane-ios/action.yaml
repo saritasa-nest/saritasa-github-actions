@@ -53,7 +53,7 @@ runs:
       if: ${{ inputs.certificate != ''}}
       shell: bash
       run: |
-        echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.p12
+        echo -n "${{ inputs.certificate }}" | base64 --decode > fastlane/cert.p12
         bundle exec fastlane ios update_keychain
     # "Provides appstore connect api key, see more: https://appstoreconnect.apple.com/access/api"
     - name: Provide appstore key
