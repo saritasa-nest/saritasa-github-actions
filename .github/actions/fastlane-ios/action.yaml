@@ -45,13 +45,13 @@ runs:
   steps:
     # Setup ruby on agent
     - name: Setup ruby on hosted agent
-      if: ${{ runner.name == 'Hosted Agent' }}
+      if: ${{ runner.environment == 'github-hosted' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
         bundler-cache: true
     - name: Setup ruby on self-hosted agent
-      if: ${{ runner.name != 'Hosted Agent' }}
+      if: ${{ runner.environment == 'self-hosted' }}
       shell: bash
       env:
         # required for some ruby versions
