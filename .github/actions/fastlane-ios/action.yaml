@@ -10,7 +10,7 @@ inputs:
   # Optional
   ruby_version:
     required: false
-    default: '3.0'
+    default: '3.0.4'
   bundler_version:
     description: Option for 'gem install` command
     required: false
@@ -18,6 +18,10 @@ inputs:
   # iOS
   certificate:
     description: "Certificate for ios sign"
+    required: false
+    default: ""
+  certificate_password:
+    description: "Certificate password for ios sign"
     required: false
     default: ""
   appstore_key:
@@ -35,22 +39,35 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # Setup ruby on github hosted machines, step fails on self-hosted macjenkins
-    - name: Setup ruby
+    # Setup ruby on agent
+    - name: Setup ruby on hosted agent
       if: ${{ runner.name == 'Hosted Agent' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
         bundler-cache: true
+    - name: Setup ruby on self-hosted agent
+      if: ${{ runner.name != 'Hosted Agent' }}
+      shell: bash
+      env:
+        # required for some ruby versions
+        # https://github.com/openssl/openssl/issues/18720
+        OPENSSL_CFLAGS: "-Wno-error=implicit-function-declaration"
+      run: |
+        rbenv install -s ${{ inputs.ruby_version }}
+        rbenv local ${{ inputs.ruby_version }}
     # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
       shell: bash
       run: |
         gem install bundler:${{ inputs.bundler_version }}
+        bundle config path "vendor/bundle" --local
         bundle install --jobs 4 --retry 3
     # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
     - name: Update ci keychain for iOS
       if: ${{ inputs.certificate != ''}}
+      env:
+        CERTIFICATE_PASSWORD: ${{ inputs.certificate_password }}
       shell: bash
       run: |
         echo -n "${{ inputs.certificate }}" | base64 --decode > fastlane/cert.p12
