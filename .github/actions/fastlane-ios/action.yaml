@@ -98,6 +98,7 @@ runs:
         bundle exec fastlane ios ${{ inputs.target }} --env ${{ inputs.environment }}
     # Remove sensitive data
     - name: Action cleanup
+      if: always()
       shell: bash
       run: | 
         cd "${{ inputs.root }}"
