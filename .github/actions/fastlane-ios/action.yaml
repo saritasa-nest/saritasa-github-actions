@@ -10,7 +10,7 @@ inputs:
   # Optional
   ruby_version:
     required: false
-    default: '3.0'
+    default: '3.0.4'
   bundler_version:
     description: Option for 'gem install` command
     required: false
@@ -18,6 +18,10 @@ inputs:
   # iOS
   certificate:
     description: "Certificate for ios sign"
+    required: false
+    default: ""
+  certificate_password:
+    description: "Certificate password for ios sign"
     required: false
     default: ""
   appstore_key:
@@ -32,27 +36,46 @@ inputs:
     description: "Appstore connect key issue for uploading to testflight/appstore"
     required: false
     default: ''
+  root:
+    description: "Path to the app root folder"
+    required: false
+    default: '.'
 runs:
   using: "composite"
   steps:
-    # Setup ruby on github hosted machines, step fails on self-hosted macjenkins
-    - name: Setup ruby
-      if: ${{ runner.name == 'Hosted Agent' }}
+    # Setup ruby on agent
+    - name: Setup ruby on hosted agent
+      if: ${{ runner.environment == 'github-hosted' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
         bundler-cache: true
+    - name: Setup ruby on self-hosted agent
+      if: ${{ runner.environment == 'self-hosted' }}
+      shell: bash
+      env:
+        # required for some ruby versions
+        # https://github.com/openssl/openssl/issues/18720
+        OPENSSL_CFLAGS: "-Wno-error=implicit-function-declaration"
+      run: |
+        rbenv install -s ${{ inputs.ruby_version }}
+        rbenv local ${{ inputs.ruby_version }}
     # Setup dependencies for fastlane package from Gemfile
     - name: Setup dependencies
       shell: bash
       run: |
+        cd "${{ inputs.root }}"
         gem install bundler:${{ inputs.bundler_version }}
+        bundle config path "vendor/bundle" --local
         bundle install --jobs 4 --retry 3
     # "Populates 'ci' keychain with provided external cert for code sign, see more: https://blog.codemagic.io/how-to-code-sign-publish-ios-apps/"
     - name: Update ci keychain for iOS
       if: ${{ inputs.certificate != ''}}
+      env:
+        CERTIFICATE_PASSWORD: ${{ inputs.certificate_password }}
       shell: bash
       run: |
+        cd "${{ inputs.root }}"
         echo -n "${{ inputs.certificate }}" | base64 --decode --output fastlane/cert.p12
         bundle exec fastlane ios update_keychain
     # "Provides appstore connect api key, see more: https://appstoreconnect.apple.com/access/api"
@@ -60,6 +83,7 @@ runs:
       if: ${{ inputs.appstore_key != ''}}
       shell: bash
       run: |
+        cd "${{ inputs.root }}"
         [[ "${{ inputs.appstore_key_id }}" ]] || { echo "appstore_key_id input is empty" ; exit 1; }
         [[ "${{ inputs.appstore_key_issuer }}" ]] || { echo "appstore_key_issuer input is empty" ; exit 1; }
         echo -n "${{ inputs.appstore_key }}" > fastlane/AuthKey.p8
@@ -69,8 +93,13 @@ runs:
     # Execute lane from Fastfile
     - name: Execute fastlane target
       shell: bash
-      run: bundle exec fastlane ios ${{ inputs.target }} --env ${{ inputs.environment }}
+      run: |
+        cd "${{ inputs.root }}"
+        bundle exec fastlane ios ${{ inputs.target }} --env ${{ inputs.environment }}
     # Remove sensitive data
     - name: Action cleanup
+      if: always()
       shell: bash
-      run: rm fastlane/*.p8 || true; rm fastlane/*.p12 || true
+      run: | 
+        cd "${{ inputs.root }}"
+        rm fastlane/*.p8 || true; rm fastlane/*.p12 || true
