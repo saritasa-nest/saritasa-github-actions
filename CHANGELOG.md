@@ -2,7 +2,7 @@
 
 ## 2024-08-21
 
-[v2.7]
+[v2.8]
 
 - [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/10)
 - Add `secrets-checks` action
