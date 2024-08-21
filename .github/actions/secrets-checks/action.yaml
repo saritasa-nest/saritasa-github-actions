@@ -104,12 +104,13 @@ runs:
         fi
 
     - name: create pr comment with checks results
+      shell: bash
       if: always() && github.event_name == 'pull_request'
-      uses: cuchi/jinja2-action@v1.2.2
-      with:
-        template: ${{ github.action_path }}/templates/pr-comment-template.j2
-        data_file: data.json
-        output_file: pr-comment.md
+      run: |
+        python3 ${{ github.action_path }}/scripts/generate-message.py \
+          ${{ github.action_path }}/templates/pr-comment-template.j2 \
+          data.json \
+          pr-comment.md
 
     - name: find pr comment with check results
       uses: peter-evans/find-comment@v3
@@ -132,13 +133,13 @@ runs:
         reactions-edit-mode: replace
 
     - name: prepare generated message for slack
+      shell: bash
       if: always()
-      uses: cuchi/jinja2-action@v1.2.2
-      with:
-        template: ${{ github.action_path }}/templates/slack-message-template.j2
-        output_file: slack-message.json
-        data_file: data.json
-        data_format: json
+      run: |
+        python3 ${{ github.action_path }}/scripts/generate-message.py \
+          ${{ github.action_path }}/templates/slack-message-template.j2 \
+          data.json \
+          slack-message.json
 
     - name: send message to slack
       if: always()
