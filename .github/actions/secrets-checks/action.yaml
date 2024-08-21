@@ -100,7 +100,7 @@ runs:
       if: always() && github.event_name == 'pull_request'
       uses: cuchi/jinja2-action@v1.2.2
       with:
-        template: .github/actions/secret-checks/templates/pr-comment-template.j2
+        template: ${{ github.action_path }}/templates/pr-comment-template.j2
         data_file: data.json
         output_file: pr-comment.md
 
@@ -128,7 +128,7 @@ runs:
       if: always()
       uses: cuchi/jinja2-action@v1.2.2
       with:
-        template: .github/actions/secret-checks/templates/slack-message-template.j2
+        template: ${{ github.action_path }}/templates/slack-message-template.j2
         output_file: slack-message.json
         data_file: data.json
         data_format: json
