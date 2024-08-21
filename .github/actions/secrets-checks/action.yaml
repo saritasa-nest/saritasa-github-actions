@@ -68,13 +68,18 @@ runs:
       if: always() && steps.trivy-check.conclusion == 'failure'
       run: |
         python3 ${{ github.action_path }}/scripts/sarif-to-json.py trivy-results.sarif trivy-output.json trivy
-        echo ${{ github.action_path }}
-        ls -la ${{ github.action_path }}
 
         # Add the contents of the trivy-output.json file to data.json, from which 
         # notifications about the results of secret checks are generated
         jq -s '.[0] * .[1]' trivy-output.json data.json | sponge data.json
         echo reactions="confused" > $GITHUB_ENV
+    
+    - name: test path
+      shell: bash
+      if: always()
+      run: |
+        echo ${{ github.action_path }}
+        ls -la ${{ github.action_path }}
 
     - name: run gitleaks check
       uses: gitleaks/gitleaks-action@v2
