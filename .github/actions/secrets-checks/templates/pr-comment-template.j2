@@ -1,0 +1,68 @@
+{%- macro fileLink(file, ref) -%}
+[{{- file.name }}]({{ repoUrl }}/blob/{{ ref }}/{{ file.name }}#L{{ file.startLine }}-L{{ file.endLine }})
+{%- endmacro -%}
+
+# Summary of the secrets check
+
+{%- if trivy or gitleaks %}
+**❗You have unencrypted secrets in your code**
+
+{%- set repoUrl = "https://github.com/" + github.repo %}
+
+{# add results of trivy check #}
+{% if trivy -%}
+## trivy
+
+{%- set trivyFiles = [] %}
+{%- for fileName, files in trivy.files.items() %}
+  {%- for file in files %}
+    {%- set trivyFiles = trivyFiles.append(file) %}
+  {%- endfor %}
+{%- endfor %}
+
+|| File | Severity | Secret type |
+|---|---|---|---|
+{%- for file in trivyFiles %}
+  | {{ loop.index }} | {{ fileLink(file, github.headRefPR) }} | {{ file.severity }} | {{ file.ruleId }} |
+{%- endfor %}
+
+<details>
+  <summary>Details</summary>
+  <pre>
+    {{- trivy.details | tojson(indent=2) }}
+  </pre>
+</details>
+{%- endif -%} {# if trivy #}
+
+{# add results of gitleaks check #}
+{% if gitleaks %}
+## gitleaks
+
+{%- set gitleaksFiles = [] %}
+{%- for fileName, files in gitleaks.files.items() %}
+  {%- for key, file in files.items() %}
+    {%- set gitleaksFiles = gitleaksFiles.append(file) %}
+  {%- endfor %}
+{%- endfor %}
+
+|| File | Commits | Secret type |
+|---|---|---|---|
+{%- for file in gitleaksFiles %}
+| {{ loop.index }} | {{ fileLink(file, file.commits[0]) }} | {{ file.commits|join('<br>') }} | {{ file.ruleId }} |
+{%- endfor %}
+---
+You can clean git history using [BFG](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository#using-the-bfg):
+```
+{% for file in gitleaks.uniqueFileNames -%}
+  bfg --delete-files {{ file }}
+{% endfor -%}
+git push --force
+```
+Be carefull, it will delete ALL files with the specified name from the git history (except for the last commit).
+{%- endif -%} {# if gitleaks #}
+{%- endif %} {# if trivy or gitleaks #}
+
+{# add results successful completion of secrets checks #}
+{%- if not trivy and not gitleaks -%}
+  ✅ **All secret checks passed successfully!**
+{%- endif %}
