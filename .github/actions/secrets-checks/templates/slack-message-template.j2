@@ -1,0 +1,140 @@
+{%- if trivy or gitleaks %}
+{%- set repoUrl = "https://github.com/" + github.repo %}
+
+{%- macro fileLink(fileName, ref) -%}
+<{{ repoUrl }}/blob/{{ ref }}/{{ fileName }}|{{ fileName }}>
+{%- endmacro -%}
+
+{%- macro pluralize(count, singular, plural=None) %}
+  {%- if count == 1 %}
+    {{- singular }}
+  {%- else %}
+    {%- if plural is none %}
+      {{- singular }}s
+    {%- else %}
+      {{- plural }}
+    {%- endif %}
+  {%- endif %}
+{%- endmacro %}
+
+{%- if github.eventName == 'pull_request' %}
+  {%- set headRef = github.headRefPR %}
+{%- endif -%}
+{%- if github.eventName == 'push' %}
+  {%- set headRef = github.headRefPush %}
+{%- endif -%}
+
+{
+  "attachments": [
+    {
+      "color": "#cc0000",
+      "blocks": [
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+{% if github.eventName == 'pull_request' %}
+            "text": "*Found exposed secrets in* \n{{ repoUrl }}/pull/{{ github.eventNumber }}\nby {{ github.actor }}"
+{% endif -%}
+{% if github.eventName == 'push' %}
+            "text": "*Found exposed secrets* in \n{{ repoUrl }}/commit/{{ github.commitSha }}\nby {{ github.actor }}"
+{%- endif %}
+          }
+        },
+{# add results of trivy check #}
+{%- if trivy %}
+        {
+          "type": "divider"
+        },
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "*Trivy* \n Found *{{ trivy.totalFiles }}* {{ pluralize(trivy.totalFiles, 'file') }} with exposed secrets"
+          }
+        },
+{%- for fileName, files in trivy.files.items() %}
+        {
+          "type": "section",
+          "fields": [
+          {
+              "type": "mrkdwn",
+              "text": ":dart: {{ fileLink(fileName, headRef) }}"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "{{ files|map(attribute='ruleId')|unique|join('\\n') }}"
+            }
+          ]
+        },
+{%- endfor %}
+{%- endif -%} {# if trivy #}
+
+{# add results of gitleaks check #}
+{%- if gitleaks %}
+        {
+          "type": "divider"
+        },
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "*Gitleaks* \n Found *{{ gitleaks.totalFiles }}* {{ pluralize(gitleaks.totalFiles, 'file') }} with exposed secrets"
+          }
+        },
+{%- for fileName, files in gitleaks.files.items() %}
+  {%- set ruleIds = [] %}
+  {%- set commits = [] %}
+  {%- for fileKey, file in files.items() %}
+    {%- set ruleIds = ruleIds.append(file.ruleId) %}
+    {%- set commits = commits.append(file.commits[0]) %}
+  {%- endfor -%}
+        {
+          "type": "section",
+          "fields": [
+            { 
+              "type": "mrkdwn",
+              "text": ":dart: {{ fileLink(fileName, commits[0]) }}"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "{{ ruleIds | unique | join('\\n') }}"
+            }
+          ]
+        },
+{%- endfor -%}
+{%- endif -%} {# if gitleaks #}
+        {
+          "type": "divider"
+        },
+        {
+          "type": "actions",
+          "elements": [
+          {
+            "type": "button",
+{% if github.eventName == 'pull_request' %}
+            "text": {
+              "type": "plain_text",
+              "text": "View PR",
+              "emoji": true
+            },
+            "value": "click_me",
+            "url": "{{ repoUrl }}/pull/{{ github.eventNumber }}"
+{% endif -%}
+{%- if github.eventName == 'push' -%}
+            "text": {
+              "type": "plain_text",
+              "text": "View commit",
+              "emoji": true
+            },
+            "value": "click_me",
+            "url": "{{ repoUrl }}/commit/{{ github.commitSha }}"
+{%- endif %}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+{%- endif -%} {# if trivy or gitleaks #}
