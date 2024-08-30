@@ -24,16 +24,16 @@ process_projectfile(){
     [[ -z $1 ]] && printf "No path for projectfile" && return 1
     printf "Processing %s:\n" "$1"
     printf "AssemblyVersion "
-    ${XMLSTARLET} ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n AssemblyVersion -v $ASSEMBLY_SEMVER "$1"
+    ${XMLSTARLET} ed -O -L -s "/_:Project/_:PropertyGroup[1]" -t elem -n AssemblyVersion -v $ASSEMBLY_SEMVER "$1"
     printf "[updated];\n"
     printf "FileVersion "
-    ${XMLSTARLET} ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n FileVersion -v $ASSEMBLY_SEMVER "$1"
+    ${XMLSTARLET} ed -O -L -s "/_:Project/_:PropertyGroup[1]" -t elem -n FileVersion -v $ASSEMBLY_SEMVER "$1"
     printf "[updated];\n"
     printf "InformationalVersion "
-    ${XMLSTARLET} ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n InformationalVersion -v $INFORM_VERSION "$1"
+    ${XMLSTARLET} ed -O -L -s "/_:Project/_:PropertyGroup[1]" -t elem -n InformationalVersion -v $INFORM_VERSION "$1"
     printf "[updated];\n"
     printf "Version "
-    ${XMLSTARLET} ed -O -L -s "/Project/PropertyGroup[1]" -t elem -n Version -v $SEMVER "$1"
+    ${XMLSTARLET} ed -O -L -s "/_:Project/_:PropertyGroup[1]" -t elem -n Version -v $SEMVER "$1"
     printf "[updated];\n\n"
 }
 export -f process_projectfile
@@ -59,7 +59,7 @@ if [[ -n "$JSON" && $? -eq 0 ]]; then
     export ASSEMBLY_SEMVER INFORM_VERSION SEMVER XMLSTARLET
     # Processing
     printf "Starting processing csproj files with:\nASSEMBLY_SEMVER=%s\nINFORM_VERSION=%s\nSEMVER=%s\n" "$ASSEMBLY_SEMVER" "$INFORM_VERSION" "$SEMVER"
-    find . -type f -name "*.csproj" -exec bash -c "process_projectfile \"{}\"" \;
+    find . -type f \( -iname "*.csproj" -o -iname "*.vbproj" \) -exec bash -c "process_projectfile \"{}\"" \;
 else
     printf "Expected valid JSON as input"
     exit 1

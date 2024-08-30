@@ -1,5 +1,11 @@
 # Changelog
 
+## 2024-08-30
+
+[v2.9]
+
+semver `process_dotnet` handles also *.vbproj files not only *.csproj
+
 ## 2024-08-21
 
 [v2.8]
