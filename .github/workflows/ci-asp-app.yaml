@@ -157,7 +157,7 @@ jobs:
 
       # Deploying an application to Azure Cloud
       - name: Download artifact from build task
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         env:
           name: '${{ inputs.environment }}'
           url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
