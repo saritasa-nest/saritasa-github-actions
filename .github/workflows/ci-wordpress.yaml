@@ -43,6 +43,11 @@ on:
         required: true
         type: number
         description: 'Specify the current version of Python to install the current version of ansible'
+      ansible_version:
+        required: true
+        type: number
+        default: 2.16.6
+        description: 'Specify the current version of Ansible to install'
       runner:
         required: false
         type: string
@@ -69,7 +74,7 @@ jobs:
 
       - name: Install Ansible
         run: |
-          pip install ansible-core==2.16.6 requests jinja2
+          pip install ansible-core==${{ inputs.ANSIBLE_VERSION }} requests jinja2
 
       - name: Install Ansistrano roles
         run: |
