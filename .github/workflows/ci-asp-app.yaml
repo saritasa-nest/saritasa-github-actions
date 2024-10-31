@@ -146,7 +146,7 @@ jobs:
           /p:publishUrl=${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
 
       - name: Upload artifact for deployment task
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.app_name }}
           path: ${{ inputs.build_path }}/${{ inputs.build_folder }}/${{ inputs.app_name }}-${{ inputs.environment }}
@@ -157,7 +157,7 @@ jobs:
 
       # Deploying an application to Azure Cloud
       - name: Download artifact from build task
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         env:
           name: '${{ inputs.environment }}'
           url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
