@@ -64,12 +64,12 @@ jobs:
 
       - name: Install Ansible
         run: |
-          pip install ansible requests jinja2
+          pip install ansible-core==2.16.6 requests jinja2
 
       - name: Install Ansistrano roles
         run: |
-          ansible-galaxy install ansistrano.rollback
-
+          ansible-galaxy install ansistrano.rollback &&\
+          ansible-galaxy collection install community.general ansible.posix
       # Adding private-key to ssh-agent
       - name: Set up ssh-agent
         uses: webfactory/ssh-agent@v0.5.2
