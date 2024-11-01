@@ -45,7 +45,7 @@ on:
         description: 'Specify the current version of Python to install the current version of ansible'
       ansible_version:
         required: true
-        type: number
+        type: string
         default: '2.16.6'
         description: 'Specify the current version of Ansible to install'
       runner:
