@@ -1,0 +1,46 @@
+# ==============================================================================
+# Whenever there is a new PR, add a small description of it to the CHANGELOG.md file
+#
+# 1. Add date
+# 2. If date already exist, it should not duplicate it, append the content to the already defined date
+# 3. Add the associated PR. It will use action context to get the PR
+# 4. If PR already exist, then it should exit as it was already added before
+# 5. Read the PR title and add that as the changelog entry explanation
+# ==============================================================================
+
+name: changelog-update
+description: this check finds the unencrypted secrets in the code
+inputs:
+  environment:
+    description: The environment in which this new PR is making a modification
+    default: dev
+  changelog_path:
+    description: The path of the CHANGELOG file
+    default: CHANGELOG.md
+  changelog_create_if_missing:
+    description: Create a new CHANGELOG file if it does not exist
+    default: "enabled"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+    - name: add changelog entry
+      env:
+        repository: ${{ github.repository }}
+        pr_number: ${{ github.event.pull_request.number }}
+        pr_title: ${{ github.event.pull_request.title }}
+      shell: bash
+      run: |
+        python3 ${{ github.action_path }}/scripts/changelog.py --repository '${{ env.repository }}' --pr-number ${{ env.pr_number }} --pr-title "${{ env.pr_title }}" --environment "${{ inputs.environment }}" --changelog-path ${{ inputs.changelog_path }} --create-if-missing ${{ inputs.changelog_create_if_missing }}
+        cat CHANGELOG.md
+    - name: commit and push
+      shell: bash
+      run: |
+        git add CHANGELOG.md
+        git config user.name 'saritasa-renovatebot[bot]'
+        git config user.email 'saritasa-renovatebot[bot]@users.noreply.github.com'
+        git commit -m "feat: update CHANGELOG"
+        git push

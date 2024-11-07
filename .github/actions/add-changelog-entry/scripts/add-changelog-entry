@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# Use environment variables 
+app_id="${MEND_RNV_GITHUB_APP_ID:-}"
+app_private_key="${MEND_RNV_GITHUB_APP_KEY:-}"
+# Parse the arguments
+repository=""
+head=""
+base=""
+environment="dev"
+changelog_path="CHANGELOG.md"
+create_if_missing="enabled"
+
+# Read the input arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --repository) repository="$2"; shift ;;
+        --head) head="$2"; shift ;;
+        --base) base="$2"; shift ;;
+        --environment) environment="$2"; shift ;;
+        --changelog-path) changelog_path="$2"; shift ;;
+        --create-if-missing) create_if_missing="$2"; shift ;;
+        *) echo "Unknown parameter passed: $1"; return 1 ;;
+    esac
+    shift
+done
+
+# Install Python library
+pip install PyGithub > /dev/null
+
+# Call the Python script with the parsed arguments
+python /home/ubuntu/extra-scripts/get_github_pr.py \
+    --app-id "$app_id" \
+    --app-private-key "$app_private_key" \
+    --repository "$repository" \
+    --head "$head" \
+    --base "$base" \
+    --environment "$environment" \
+    --changelog-path "$changelog_path" \
+    --create-if-missing "$create_if_missing"
+
+# Example usage
+# add-changelog-entry --repository "org/repo" --head "main" --base "develop" --environment "prod" --changelog-path "/path/to/CHANGELOG.md"
