@@ -53,6 +53,11 @@ runs:
           '{github: {repo: $repo, headRefPush: $headRefPush, headRefPR: $headRefPR, actor: $actor, eventName: $eventName, eventNumber: $eventNumber, commitSha: $commitSha}}' \
           > data.json
 
+    - name: manual trivy setup
+      uses: aquasecurity/setup-trivy@v0.2.1
+      with:
+        version: v0.56.2
+
     - name: run trivy vulnerability scanner in fs mode
       uses: aquasecurity/trivy-action@0.28.0
       if : inputs.enable-trivy-check == 'true'
