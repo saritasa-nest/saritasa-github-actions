@@ -59,7 +59,7 @@ runs:
         version: v0.56.2
 
     - name: run trivy vulnerability scanner in fs mode
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.29.0
       if : inputs.enable-trivy-check == 'true'
       id: trivy-check
       with:
