@@ -1,5 +1,12 @@
 # Changelog
 
+## 2024-11-25
+
+[v3.1]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/13)
+- Update `trivy`check
+
 ## 2024-10-30
 
 [v2.9-dev.1]

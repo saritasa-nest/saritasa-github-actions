@@ -53,7 +53,7 @@ runs:
           '{github: {repo: $repo, headRefPush: $headRefPush, headRefPR: $headRefPR, actor: $actor, eventName: $eventName, eventNumber: $eventNumber, commitSha: $commitSha}}' \
           > data.json
 
-    - name: manual trivy setup
+    - name: install trivy
       uses: aquasecurity/setup-trivy@v0.2.1
       with:
         version: v0.56.2
