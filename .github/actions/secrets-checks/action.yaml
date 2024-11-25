@@ -53,16 +53,24 @@ runs:
           '{github: {repo: $repo, headRefPush: $headRefPush, headRefPR: $headRefPR, actor: $actor, eventName: $eventName, eventNumber: $eventNumber, commitSha: $commitSha}}' \
           > data.json
 
+    - name: install trivy
+      uses: aquasecurity/setup-trivy@v0.2.1
+      with:
+        version: v0.56.2
+
     - name: run trivy vulnerability scanner in fs mode
-      uses: aquasecurity/trivy-action@0.21.0
+      uses: aquasecurity/trivy-action@0.29.0
       if : inputs.enable-trivy-check == 'true'
       id: trivy-check
       with:
-        scan-type: "fs"
-        scan-ref: "."
+        scan-type: fs
+        scan-ref: .
         format: sarif
         exit-code: 1
         output: trivy-results.sarif
+        skip-setup-trivy: true
+      env:
+        TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
 
     - name: add trivy failure check results to data file
       shell: bash
@@ -74,13 +82,6 @@ runs:
         # notifications about the results of secret checks are generated
         jq -s '.[0] * .[1]' trivy-output.json data.json | sponge data.json
         echo reactions="confused" > $GITHUB_ENV
-    
-    - name: test path
-      shell: bash
-      if: always()
-      run: |
-        echo ${{ github.action_path }}
-        ls -la ${{ github.action_path }}
 
     - name: run gitleaks check
       uses: gitleaks/gitleaks-action@v2
