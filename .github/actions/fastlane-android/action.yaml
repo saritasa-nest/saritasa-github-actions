@@ -42,7 +42,8 @@ runs:
   steps:
     # Setup step fails on self-hosted macjenkins
     - name: Setup ruby
-      if: ${{ runner.environment == 'github-hosted' }}
+      continue-on-error: true
+      # if: ${{ runner.environment == 'github-hosted' }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ inputs.ruby_version }}
