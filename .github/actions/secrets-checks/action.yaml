@@ -13,6 +13,12 @@ inputs:
       https://github.com/gitleaks/gitleaks-action
     required: true
     default: "false"
+  enable-pr-comment:
+    description: |
+      enable pr comment
+      false only for .net projects
+    required: true
+    default: "true"
   github-token:
     description: github token secret
     required: true
@@ -69,7 +75,6 @@ runs:
         exit-code: 1
         output: trivy-results.sarif
         skip-setup-trivy: true
-        trivyignores: .trivyignore.yaml
       env:
         TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
 
@@ -108,7 +113,7 @@ runs:
 
     - name: create pr comment with checks results
       shell: bash
-      if: always() && github.event_name == 'pull_request'
+      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
       run: |
         python3 ${{ github.action_path }}/scripts/generate-message.py \
           ${{ github.action_path }}/templates/pr-comment-template.j2 \
@@ -117,7 +122,7 @@ runs:
 
     - name: find pr comment with check results
       uses: peter-evans/find-comment@v3
-      if: always() && github.event_name == 'pull_request'
+      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
       id: find-comment
       with:
         issue-number: ${{ github.event.number }}
@@ -125,7 +130,7 @@ runs:
         body-includes: Summary of the secrets check
 
     - name: upload checks results as a pr comment
-      if: always() && github.event_name == 'pull_request'
+      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
       uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{ github.event.number }}
