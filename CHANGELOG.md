@@ -2,7 +2,7 @@
 
 ## 2025-01-30
 
-[3.2]
+[v3.2]
 
 - [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/14)
 - Added variable `enable-pr-comment` for `secrets-checks`, allowing to disable PR check comment.
