@@ -1,5 +1,13 @@
 # Changelog
 
+## 2025-01-30
+
+[v3.2]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/14)
+- Added variable `enable-pr-comment` for `secrets-checks`, allowing to disable PR check comment.
+  Used for .NET projects where the comment is unnecessary for developers.
+
 ## 2024-11-25
 
 [v3.1]
