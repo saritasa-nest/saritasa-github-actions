@@ -89,7 +89,7 @@ INFORM_VERSION=
 # Output:
 #	Branch name
 _get_main_branch_name(){
-	git branch -r --format='%(refname:short)' | grep "main\|master" -m1
+	git branch -r --format='%(refname:short)' | grep "ios/main\|master" -m1
 }
 
 #######################################
@@ -136,8 +136,8 @@ get_MMP_TAG(){
 	local BRANCH=${1:-HEAD}
 	local MAIN_BRANCH=$(_get_main_branch_name)
 	local TAG
-	if [[ $BRANCH =~ main|master ]]; then
-		pecho "Processing \"$BRANCH\" as main branch"
+	if [[ $BRANCH =~ ios/main|master ]]; then
+		pecho "Processing \"$BRANCH\" as ios/main branch"
 		TAG="$(git tag --sort='-creatordate' --merged $BRANCH 2>/dev/null || echo "")"
 	else
 		pecho "Processing \"$BRANCH\" as non-main branch"
@@ -173,7 +173,7 @@ get_version_for_main_branch(){
 	if ! get_MMP_TAG $BRANCH ; then
 		pexit "Production releases without tag are no allowed"
 	fi
-	DESCRIPTION="Main branch"
+	DESCRIPTION="ios/Main branch"
 	MMP=$MMP_TAG
 	# BUILD for main branches always 0
 	BUILD="0"
@@ -195,14 +195,14 @@ get_version_for_detached_head(){
 	else
 		BRANCH=$(git branch -r --format='%(refname:short)' --contains tags/$MMP_TAG)
 		if [[ -z ${ALLOW_NONMAIN_HEAD:-} ]]; then
-			if ! echo $BRANCH | grep "main\|master" ; then
-				pexit "Tag $MMP_TAG does not belong to main branch."
+			if ! echo $BRANCH | grep "ios/main\|master" ; then
+				pexit "Tag $MMP_TAG does not belong to ios/main branch."
 			fi
-			DESCRIPTION="Main branch"
+			DESCRIPTION="ios/main branch"
 		else
 			DESCRIPTION="$BRANCH branch"
 			MMP=$MMP_TAG
-			# ignoring commit_weight for main branches
+			# ignoring commit_weight for ios/main branches
 			BUILD="0"
 		fi
 	fi
@@ -221,10 +221,10 @@ get_version_for_release_branch(){
 	local LOG_PREFIX="get_version_for_release: "
 	local BRANCH=$(_get_branch_name)
 	# postfix validation
-	if [[ ! $BRANCH =~ ^release\/([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-		pexit "Wrong release name. Expected SEMVER: release/x.x.x"
+	if [[ ! $BRANCH =~ ^ios/release\/([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+		pexit "Wrong ios/release name. Expected SEMVER: ios/release/x.x.x"
 	fi
-	DESCRIPTION="Release branch"
+	DESCRIPTION="ios/Release branch"
 	SUFFIX="-beta"
 	MMP=${BASH_REMATCH[1]}
 	BUILD=$(_get_commit_weight)
@@ -291,7 +291,7 @@ get_version_for_staging_branch(){
 	MMP_ARRAY[2]=0
 	MMP=$(join_by . "${MMP_ARRAY[@]}")
 	BUILD=$(_get_commit_weight)
-	DESCRIPTION="Staging branch"
+	DESCRIPTION="ios/Staging branch"
 	SUFFIX="-staging"
 }
 
@@ -324,11 +324,11 @@ get_version_for_development_branch(){
 	MMP=$(join_by . "${MMP_ARRAY[@]}")
 	BUILD=$(_get_commit_weight)
 
-	if [[ $BRANCH == develop ]]; then
+	if [[ $BRANCH == ios/develop ]]; then
 		DESCRIPTION="Develop branch"
 		SUFFIX="-dev"
 	# postfix validation for feature branches
-	elif [[ $BRANCH =~ ^feature/(.*)$ ]]; then
+	elif [[ $BRANCH =~ ^ios/feature/(.*)$ ]]; then
 		DESCRIPTION="Feature branch"
 		SUFFIX="-${BASH_REMATCH[1]}"
 	else
@@ -381,15 +381,15 @@ if [[ $# -eq 0 ]]; then
 	# --------------------------------------------
 	# calculating MMP, SUFFIX, BUILD according matched branch name
 	pecho "Getting version for $BRANCH"
-	if [[ $BRANCH =~ main|master ]]; then
+	if [[ $BRANCH =~ ios/main|master ]]; then
 		get_version_for_main_branch
 	elif [[ $BRANCH == HEAD ]]; then
 		get_version_for_detached_head
-	elif [[ $BRANCH =~ ^release.* ]]; then
+	elif [[ $BRANCH =~ ^ios/release.* ]]; then
 		get_version_for_release_branch
-	elif [[ $BRANCH =~ ^hotfix.* ]]; then
+	elif [[ $BRANCH =~ ^ios/hotfix.* ]]; then
 		get_version_for_hotfix_branch
-	elif [[ $BRANCH == staging ]]; then
+	elif [[ $BRANCH == ios/staging ]]; then
 		get_version_for_staging_branch
 	else
 		get_version_for_development_branch
