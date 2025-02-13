@@ -1,5 +1,12 @@
 # Changelog
 
+## 2025-02-12
+
+[v3.3]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/15)
+- Added summary for action with information about the result of `secrets-checks`
+
 ## 2025-01-30
 
 [v3.2]
