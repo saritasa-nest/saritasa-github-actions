@@ -97,6 +97,7 @@ runs:
         GITHUB_TOKEN: ${{inputs.github-token}}
         GITLEAKS_LICENSE: ${{inputs.gitleaks-license}}
         GITLEAKS_ENABLE_COMMENTS: false
+        GITLEAKS_ENABLE_SUMMARY: false
 
     - name: add gitleaks check results to data file
       shell: bash
@@ -113,12 +114,18 @@ runs:
 
     - name: create pr comment with checks results
       shell: bash
-      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
+      if: always()
       run: |
         python3 ${{ github.action_path }}/scripts/generate-message.py \
           ${{ github.action_path }}/templates/pr-comment-template.j2 \
           data.json \
           pr-comment.md
+
+    - name: add comment to github actions summary
+      if: always()
+      shell: bash
+      run: |
+        cat pr-comment.md > $GITHUB_STEP_SUMMARY
 
     - name: find pr comment with check results
       uses: peter-evans/find-comment@v3
