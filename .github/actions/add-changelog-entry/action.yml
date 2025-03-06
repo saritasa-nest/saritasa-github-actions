@@ -23,13 +23,25 @@ inputs:
   run_in_base_branch:
     description: If true, Changelog file will be modified in base branch of PR. (Instead of default head branch)
     default: 'true'
+  RENOVATEBOT_APP_ID:
+    description: Github App ID
+    default: ""
+  RENOVATEBOT_APP_PRIVATE_KEY:
+    description: Github App Private key
+    default: ""
 
 runs:
   using: composite
   steps:
+    - uses: actions/create-github-app-token@v1
+      id: app-token
+      with:
+        app-id: ${{ inputs.RENOVATEBOT_APP_ID }}
+        private-key: ${{ inputs.RENOVATEBOT_APP_PRIVATE_KEY }}
     - uses: actions/checkout@v4
       with:
         ref: ${{ (inputs.run_in_base_branch == 'true' && github.base_ref) || github.head_ref }}
+        token: ${{ steps.app-token.outputs.token }}
     - name: add changelog entry
       env:
         repository: ${{ github.repository }}
