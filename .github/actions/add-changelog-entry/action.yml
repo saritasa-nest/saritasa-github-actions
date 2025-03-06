@@ -20,13 +20,16 @@ inputs:
   changelog_create_if_missing:
     description: Create a new CHANGELOG file if it does not exist
     default: "enabled"
+  run_in_base_branch:
+    description: If true, Changelog file will be modified in base branch of PR. (Instead of default head branch)
+    default: 'true'
 
 runs:
   using: composite
   steps:
     - uses: actions/checkout@v4
       with:
-        ref: ${{ github.head_ref }}
+        ref: ${{ (inputs.run_in_base_branch == 'true' && github.base_ref) || github.head_ref }}
     - name: add changelog entry
       env:
         repository: ${{ github.repository }}
