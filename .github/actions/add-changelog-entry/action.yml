@@ -33,7 +33,14 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Check that Renovate creds are set if `run_in_base_branch` is true
+      shell: bash
+      if: inputs.run_in_base_branch == 'true' && (inputs.RENOVATEBOT_APP_ID == '' || inputs.RENOVATEBOT_APP_PRIVATE_KEY == '')
+      run: |
+        echo "Error: RENOVATEBOT_APP_ID and RENOVATEBOT_APP_PRIVATE_KEY must be set when run_in_base_branch is true."
+        exit 1
     - uses: actions/create-github-app-token@v1
+      if: inputs.run_in_base_branch == 'true'
       id: app-token
       with:
         app-id: ${{ inputs.RENOVATEBOT_APP_ID }}
