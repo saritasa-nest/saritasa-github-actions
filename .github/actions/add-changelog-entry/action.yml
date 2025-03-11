@@ -23,11 +23,14 @@ inputs:
   run_in_base_branch:
     description: If true, Changelog file will be modified in base branch of PR. (Instead of default head branch)
     default: 'true'
-  RENOVATEBOT_APP_ID:
+  GITHUB_APP_ID:
     description: Github App ID
     default: ""
-  RENOVATEBOT_APP_PRIVATE_KEY:
+  GITHUB_APP_PRIVATE_KEY:
     description: Github App Private key
+    default: ""
+  GITHUB_APP_NAME:
+    description: Github App name (used to set up commits author)
     default: ""
 
 runs:
@@ -35,16 +38,16 @@ runs:
   steps:
     - name: Check that Renovate creds are set if `run_in_base_branch` is true
       shell: bash
-      if: inputs.run_in_base_branch == 'true' && (inputs.RENOVATEBOT_APP_ID == '' || inputs.RENOVATEBOT_APP_PRIVATE_KEY == '')
+      if: inputs.run_in_base_branch == 'true' && (inputs.GITHUB_APP_ID == '' || inputs.GITHUB_APP_PRIVATE_KEY == '')
       run: |
-        echo "Error: RENOVATEBOT_APP_ID and RENOVATEBOT_APP_PRIVATE_KEY must be set when run_in_base_branch is true."
+        echo "Error: GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY must be set when run_in_base_branch is true."
         exit 1
     - uses: actions/create-github-app-token@v1
       if: inputs.run_in_base_branch == 'true'
       id: app-token
       with:
-        app-id: ${{ inputs.RENOVATEBOT_APP_ID }}
-        private-key: ${{ inputs.RENOVATEBOT_APP_PRIVATE_KEY }}
+        app-id: ${{ inputs.GITHUB_APP_ID }}
+        private-key: ${{ inputs.GITHUB_APP_PRIVATE_KEY }}
     - uses: actions/checkout@v4
       with:
         ref: ${{ (inputs.run_in_base_branch == 'true' && github.base_ref) || github.head_ref }}
@@ -62,7 +65,7 @@ runs:
       shell: bash
       run: |
         git add CHANGELOG.md
-        git config user.name 'saritasa-renovatebot[bot]'
-        git config user.email 'saritasa-renovatebot[bot]@users.noreply.github.com'
+        git config user.name '${{ inputs.GITHUB_APP_NAME }}[bot]'
+        git config user.email '${{ inputs.GITHUB_APP_NAME }}[bot]@users.noreply.github.com'
         git commit -m "feat: update CHANGELOG"
         git push
