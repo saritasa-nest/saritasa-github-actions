@@ -3,9 +3,13 @@
 #
 # 1. Add date
 # 2. If date already exist, it should not duplicate it, append the content to the already defined date
-# 3. Add the associated PR. It will use action context to get the PR
-# 4. If PR already exist, then it should exit as it was already added before
-# 5. Read the PR title and add that as the changelog entry explanation
+# 3. If PR number already exist in changelog, then it should exit as it was already added before
+# 4. Read the PR title and add that as the changelog entry explanation
+# 5.a If `run_in_base_branch` is false then commit will be added directly to open PR (It will use action context to get the PR)
+# 6.a No additional variable/secret configuration is needed, commit author will be saritasa-renovatebot
+# 5.b If `run_in_base_branch` is true then commit will be added to base branch (probably main/develop) after PR is merged
+# 6.b `GITHUB_APP_ID` `GITHUB_APP_PRIVATE_KEY` `GITHUB_APP_NAME` must be configured to use saritasa-changelog Github app (https://github.com/organizations/saritasa-nest/settings/apps/saritasa-changelog)
+# 7.b `Do not allow bypassing the above settings config` must be disabled to allow Admins to bypass branch protections
 # ==============================================================================
 
 name: changelog-update
@@ -30,8 +34,8 @@ inputs:
     description: Github App Private key
     default: ""
   GITHUB_APP_NAME:
-    description: Github App name (used to set up commits author)
-    default: ""
+    description: Github App name (used to set up commits author). Use RenovateBot as default
+    default: "saritasa-renovatebot"
 
 runs:
   using: composite
