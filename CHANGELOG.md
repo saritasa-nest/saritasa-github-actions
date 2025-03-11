@@ -1,5 +1,12 @@
 # Changelog
 
+## 2025-03-14
+
+[v3.4]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/17)
+- Added `pre-commit` composite action
+
 ## 2025-02-12
 
 [v3.3]
