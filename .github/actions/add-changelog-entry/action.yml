@@ -8,7 +8,7 @@
 # 5.a If `run_in_base_branch` is false then commit will be added directly to open PR (It will use action context to get the PR)
 # 6.a No additional variable/secret configuration is needed, commit author will be saritasa-renovatebot
 # 5.b If `run_in_base_branch` is true then commit will be added to base branch (probably main/develop) after PR is merged
-# 6.b `GITHUB_APP_ID` `GITHUB_APP_PRIVATE_KEY` `GITHUB_APP_NAME` must be configured to use saritasa-changelog Github app (https://github.com/organizations/saritasa-nest/settings/apps/saritasa-changelog)
+# 6.b `github_app_id` `github_app_private_key` `github_app_name` must be configured to use saritasa-changelog Github app (https://github.com/organizations/saritasa-nest/settings/apps/saritasa-changelog)
 # 7.b `Do not allow bypassing the above settings config` must be disabled to allow Admins to bypass branch protections
 # ==============================================================================
 
@@ -27,13 +27,13 @@ inputs:
   run_in_base_branch:
     description: If true, Changelog file will be modified in base branch of PR. (Instead of default head branch)
     default: 'true'
-  GITHUB_APP_ID:
+  github_app_id:
     description: Github App ID
     default: ""
-  GITHUB_APP_PRIVATE_KEY:
+  github_app_private_key:
     description: Github App Private key
     default: ""
-  GITHUB_APP_NAME:
+  github_app_name:
     description: Github App name (used to set up commits author). Use RenovateBot as default
     default: "saritasa-renovatebot"
 
@@ -42,16 +42,16 @@ runs:
   steps:
     - name: Check that Renovate creds are set if `run_in_base_branch` is true
       shell: bash
-      if: inputs.run_in_base_branch == 'true' && (inputs.GITHUB_APP_ID == '' || inputs.GITHUB_APP_PRIVATE_KEY == '')
+      if: inputs.run_in_base_branch == 'true' && (inputs.github_app_id == '' || inputs.github_app_private_key == '')
       run: |
-        echo "Error: GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY must be set when run_in_base_branch is true."
+        echo "Error: github_app_id and github_app_private_key must be set when run_in_base_branch is true."
         exit 1
     - uses: actions/create-github-app-token@v1
       if: inputs.run_in_base_branch == 'true'
       id: app-token
       with:
-        app-id: ${{ inputs.GITHUB_APP_ID }}
-        private-key: ${{ inputs.GITHUB_APP_PRIVATE_KEY }}
+        app-id: ${{ inputs.github_app_id }}
+        private-key: ${{ inputs.github_app_private_key }}
     - uses: actions/checkout@v4
       with:
         ref: ${{ (inputs.run_in_base_branch == 'true' && github.base_ref) || github.head_ref }}
@@ -69,7 +69,7 @@ runs:
       shell: bash
       run: |
         git add CHANGELOG.md
-        git config user.name '${{ inputs.GITHUB_APP_NAME }}[bot]'
-        git config user.email '${{ inputs.GITHUB_APP_NAME }}[bot]@users.noreply.github.com'
+        git config user.name '${{ inputs.github_app_name }}[bot]'
+        git config user.email '${{ inputs.github_app_name }}[bot]@users.noreply.github.com'
         git commit -m "feat: update CHANGELOG"
         git push
