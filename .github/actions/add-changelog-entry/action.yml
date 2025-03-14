@@ -26,7 +26,7 @@ inputs:
     default: "enabled"
   run_in_base_branch:
     description: If true, Changelog file will be modified in base branch of PR. (Instead of default head branch)
-    default: 'true'
+    default: "true"
   github_app_id:
     description: Github App ID
     default: ""
@@ -63,7 +63,13 @@ runs:
         pr_title: ${{ github.event.pull_request.title }}
       shell: bash
       run: |
-        python3 ${{ github.action_path }}/scripts/changelog.py --repository '${{ env.repository }}' --pr-number ${{ env.pr_number }} --pr-title "${{ env.pr_title }}" --environment "${{ inputs.environment }}" --changelog-path ${{ inputs.changelog_path }} --create-if-missing ${{ inputs.changelog_create_if_missing }}
+        python3 ${{ github.action_path }}/scripts/changelog.py \
+          --repository '${{ env.repository }}' \
+          --pr-number ${{ env.pr_number }} \
+          --pr-title "${{ env.pr_title }}" \
+          --environment "${{ inputs.environment }}" \
+          --changelog-path ${{ inputs.changelog_path }} \
+          --create-if-missing ${{ inputs.changelog_create_if_missing }}
         cat CHANGELOG.md
     - name: commit and push
       shell: bash
@@ -71,5 +77,5 @@ runs:
         git add CHANGELOG.md
         git config user.name '${{ inputs.github_app_name }}[bot]'
         git config user.email '${{ inputs.github_app_name }}[bot]@users.noreply.github.com'
-        git commit -m "feat: update CHANGELOG"
+        git commit -m "docs: update CHANGELOG"
         git push
