@@ -1,0 +1,148 @@
+  # ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  # │   PRE-COMMIT COMPOSITE ACTION                                                                                      │
+  # │   ---                                                                                                              │
+  # │                                                                                                                    │
+  # │   The 'pre-commit' action installs and sets up needed tools, caches them and runs pre-commit checks on the code.   │
+  # │   All pre-commit hooks are taken from the `.pre-commit-config.yaml` file.                                          │
+  # │   This action is needed to block merges and pushes to `develop` and `main` branches if commits were made without   │
+  # │   local pre-commit checks (e.g. commited/pushed using '--no-verify').                                              │
+  # │                                                                                                                    │
+  # └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ 
+name: pre-commit
+description: Action used to run pre-commit checks on the code. All pre-commit hooks are taken from the .pre-commit-config.yaml file. 
+inputs:
+  ignore-commit-authors:
+    description: |
+      Whose commits to skip during Jira Task ID in commit message pre-commit check
+      Autocommits made by bots (e.g. tekton-kustomize) usually don't have Jira Task ID in them
+      This input allows us to specify authors whose commit messages should be ignored      
+    required: false
+    default: tekton-kustomize
+  node-version:
+    description: |
+      Node.js version
+      Node.js is needed for terraform_fmt pre-commit hook (used for formatting Terraform files) to work      
+    required: false
+    default: '20'
+  python-version:
+    description: |
+      Python version
+      Python is needed to install `pre-commit`
+      `pre-commit` is installed via `python -m pip install pre-commit` in the workflow    
+    required: false
+    default: '3.x'
+  tools-list:
+    description: |
+      List of needed pre-commit tools with their download URLs
+      List of tools required for pre-commit hooks to function properly.
+      The format for specifying tools is: <tool_name>=<tool_url>
+      Example:
+      tools-list: |
+        terraform-docs=https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz
+        terragrunt=https://github.com/gruntwork-io/terragrunt/releases/download/v0.75.0/terragrunt_linux_amd64
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Setup Python using the python-version from inputs
+    - name: Setup python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # Get Terraform version, if a `.terraform-version` file exists in the repo
+    # Otherwise, use the latest version
+    - name: Get terraform version
+      shell: bash
+      run: |
+        TERRAFORM_VERSION=$( [[ -f .terraform-version ]] && cat .terraform-version || echo "latest" )
+        echo "TERRAFORM_VERSION=$TERRAFORM_VERSION" >> $GITHUB_ENV
+
+    # Setup Terraform using terraform_version from the step before
+    - name: Setup terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+    # Cache `pre-commit` tools so that we don’t need to download them every time
+    - name: Cache pre-commit tools
+      id: cache-tools
+      uses: actions/cache@v4
+      with:
+        path: $HOME/pre-commit-tools
+        key: pre-commit-tools-${{ hashFiles('.github/workflows/pre-commit.yaml') }}
+
+    # Install `pre-commit` tools from the tools-list input
+    # If cached, this step is skipped
+    - name: Install pre-commit tools
+      shell: bash
+      if: steps.cache-tools.outputs.cache-hit != 'true'
+      run: |
+        tools_dir="$HOME/pre-commit-tools"
+        mkdir -p $tools_dir
+
+        # Read tools list and install each tool based on its type
+        while IFS="=" read -r tool_name tool_url; do
+          [[ -z "$tool_name" || -z "$tool_url" ]] && continue
+          tool_path="$tools_dir/$tool_name"
+
+          echo "Downloading $tool_name from $tool_url..."
+          curl -L -o $tool_path "$tool_url"
+
+          # Extract tools if they are compressed, otherwise make them executable
+          if [[ $tool_url == *.tar.gz ]]; then
+            tar -xzf $tool_path -C $tools_dir
+          elif [[ $tool_url == *.zip ]]; then
+            unzip $tool_path -d $tools_dir
+          else
+            chmod +x $tool_path
+          fi
+        done <<< "${{ inputs.tools-list }}"
+
+        # Make directory available to all subsequent actions in this job
+        echo $tools_dir >> $GITHUB_PATH
+
+    # Setup Node.js since `terraform_fmt` depends on it
+    - name: Setup node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    # Cache the `pre-commit` environment so `pre-commit` hooks don’t need to be installed every time
+    - name: Cache pre-commit
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
+    # Run `pre-commit` checks (what checks to run are taken from the `.pre-commit-config.yaml`)
+    - name: Run pre-commit
+      uses: pre-commit/action@v3.0.1
+
+    # Get commit messages and run Jira `pre-commit` hook on them
+    - name: Run jira pre-commit hook
+      shell: bash
+      run: |
+        commits_range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+
+        # Save commit logs in a "COMMIT_HASH|AUTHOR|COMMIT_MESSAGE" format
+        # For example: "876d2c4f300a32e424c31e0be35cad96c0d1e798|Commit Author|feat: add jira-pre-commit hook SD-1174"
+        git log --format="%H|%an|%s" --no-merges $commits_range > .git/COMMIT_EDITMSG
+
+        # Process each commit in the range
+        while IFS= read -r commit; do
+          commit_hash=$(echo "$commit" | cut -d '|' -f 1)
+          author=$(echo "$commit" | cut -d '|' -f 2)
+          commit_msg=$(echo "$commit" | cut -d '|' -f 3-)
+
+          # Output commit link and message
+          echo "https://github.com/${{ github.repository }}/commit/$commit_hash -- $commit_msg"
+
+          # Skip, if committed by a user listed in ignore-commit-authors
+          echo "${{ inputs.ignore-commit-authors }}" | grep -Fxq "$author" && { echo "Skipping JIRA check for commit by $author"; continue; }
+
+          # Run the Jira pre-commit hook on each commit message
+          echo "$commit_msg" > tmp_commit_msg.txt
+          pre-commit run jira-pre-commit --hook-stage commit-msg --commit-msg-filename tmp_commit_msg.txt
+        done < .git/COMMIT_EDITMSG
