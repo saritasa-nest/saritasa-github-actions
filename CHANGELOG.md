@@ -4,6 +4,11 @@
 
 [v3.4]
 
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/18)
+- Deleted `updates-dependencies-python` action
+
+[v3.4]
+
 - [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/17)
 - Added `pre-commit` composite action
 
