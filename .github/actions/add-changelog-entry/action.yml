@@ -13,7 +13,7 @@
 # ==============================================================================
 
 name: changelog-update
-description: this check finds the unencrypted secrets in the code
+description: this action updates the CHANGELOG.md file adding a new entry with the PR link and title
 inputs:
   environment:
     description: The environment in which this new PR is making a modification
