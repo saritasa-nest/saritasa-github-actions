@@ -13,7 +13,7 @@
 # ==============================================================================
 
 name: changelog-update
-description: this action updates the CHANGELOG.md file adding a new entry with the PR link and title
+description: this action updates the CHANGELOG.md file by adding a new entry with the corresponding PR link and title on merge.
 inputs:
   environment:
     description: The environment in which this new PR is making a modification
