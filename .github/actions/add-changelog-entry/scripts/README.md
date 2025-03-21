@@ -30,7 +30,7 @@ jobs:
         with:
           environment: prod
           changelog_path: CHANGELOG.md
-          run_in_base_branch: 'true' # this is the default of the action. Added here as an example
+          run_in_base_branch: 'true'
           # Github App: saritasa-changelog: https://github.com/organizations/saritasa-nest/settings/apps/saritasa-changelog
           # https://keys.saritasa.cloud/cred/detail/H2atFvKrn59dnNW5kk68ko/
           github_app_id: ${{ vars.changelog_app_id }}
@@ -74,7 +74,7 @@ jobs:
 - `environment`: (defaults to `dev`) specify which sub-title should have each entry in the PRs.
 - `changelog_path`: (defaults to {{ $.github.basedir }}/CHANGELOG.md)
 - `changelog_create_if_missing`: (defaults to true) Create a new CHANGELOG.md file if it does not exist.
-- `run_in_base_branch`: Set to `true` to commit to the base branch after PR is merged, `false` to commit directly to the open PR.
+- `run_in_base_branch`: (defaults to `false`) Set to `true` to commit to the base branch after PR is merged, `false` to commit directly to the open PR.
 - `github_app_id`: (Required if `run_in_base_branch` is `true`) The GitHub App ID.
 - `github_app_private_key`: (Required if `run_in_base_branch` is `true`) The GitHub App private key.
 - `github_app_name`: (defaults to `saritasa-renovatebot`) The GitHub App name. If using changelog app, specify it as `saritasa-changelog`.
