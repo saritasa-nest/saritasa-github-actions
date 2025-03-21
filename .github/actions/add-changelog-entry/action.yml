@@ -77,5 +77,6 @@ runs:
         git add CHANGELOG.md
         git config user.name '${{ inputs.github_app_name }}[bot]'
         git config user.email '${{ inputs.github_app_name }}[bot]@users.noreply.github.com'
-        git commit -m "docs: update CHANGELOG"
+        # Only commit if there are changes
+        git diff --cached --quiet || git commit -m "docs: update CHANGELOG"
         git push
