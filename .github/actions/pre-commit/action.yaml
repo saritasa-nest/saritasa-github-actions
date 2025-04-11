@@ -94,7 +94,7 @@ runs:
           if [[ $tool_url == *.tar.gz ]]; then
             tar -xzf $tool_path -C $tools_dir
           elif [[ $tool_url == *.zip ]]; then
-            unzip $tool_path -d $tools_dir
+            unzip -o $tool_path -d $tools_dir
           else
             chmod +x $tool_path
           fi
