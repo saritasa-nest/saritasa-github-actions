@@ -17,8 +17,8 @@ on:
         description: 'The address of the server'
       server_port:
         required: false
-        type: number
-        default: 22
+        type: string
+        default: '22'
         description: 'The port of the server'
       username:
         type: string
