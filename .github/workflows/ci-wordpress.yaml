@@ -113,7 +113,7 @@ jobs:
           ${{ inputs.HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
-          "ansible_ssh_port=${{ inputs.SERVER_PORT }} \
+          "ansible_port=${{ inputs.SERVER_PORT }} \
            ansistrano_release_version=`date -u +%Y-%m-%d-%H%M%SZ` \
            deploy_path=${{ inputs.DEPLOY_PATH }} \
            deploy_repo=${{ inputs.DEPLOY_REPO }} \
