@@ -108,13 +108,13 @@ jobs:
           # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
           ANSIBLE_PIPELINING: True
           ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}
+          ANSIBLE_REMOTE_PORT: ${{ inputs.SERVER_PORT }}
         run: |
           ansible-playbook -i \
           ${{ inputs.HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
-          "ansible_port=${{ inputs.SERVER_PORT }} \
-           ansistrano_release_version=`date -u +%Y-%m-%d-%H%M%SZ` \
+          "ansistrano_release_version=`date -u +%Y-%m-%d-%H%M%SZ` \
            deploy_path=${{ inputs.DEPLOY_PATH }} \
            deploy_repo=${{ inputs.DEPLOY_REPO }} \
            deploy_branch=${{ inputs.DEPLOY_BRANCH }}"
