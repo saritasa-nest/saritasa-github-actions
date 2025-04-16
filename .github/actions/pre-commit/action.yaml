@@ -65,19 +65,21 @@ runs:
       with:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-    # Restore `pre-commit` tools cache (if there is one)
-    - name: Restore pre-commit tools cache
-      id: restore-tools-cache
+    # Restore `pre-commit` cache (both the hooks and tools)
+    - name: Restore pre-commit cache
+      id: restore-pre-commit-cache
       uses: actions/cache/restore@v4
       with:
-        path: ~/pre-commit-tools
-        key: pre-commit-tools-${{ hashFiles('.github/workflows/pre-commit.yaml') }}
+        path: |
+          ~/.cache/pre-commit
+          ~/pre-commit-tools
+        key: pre-commit-cache-${{ hashFiles('.github/workflows/pre-commit.yaml', '.pre-commit-config.yaml') }}
 
     # Install `pre-commit` tools from the tools-list input
     # If cached, this step is skipped
     - name: Install pre-commit tools
       shell: bash
-      if: steps.restore-tools-cache.outputs.cache-hit != 'true'
+      if: steps.restore-pre-commit-cache.outputs.cache-hit != 'true'
       run: |
         tools_dir="$HOME/pre-commit-tools"
         mkdir -p $tools_dir
@@ -103,28 +105,11 @@ runs:
         # Make directory available to all subsequent actions in this job
         echo $tools_dir >> $GITHUB_PATH
 
-    # Save `pre-commit` tools cache, so that we don’t need to download them every time
-    - name: Save pre-commit tools cache
-      id: save-tools-cache
-      if: steps.restore-tools-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ~/pre-commit-tools
-        key: ${{ steps.restore-tools-cache.outputs.cache-primary-key }}
-
     # Setup Node.js since `terraform_fmt` depends on it
     - name: Setup node
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-
-    # Restore cache of `pre-commit` environments
-    - name: Restore pre-commit environments cache
-      id: cache-pre-commit-restore
-      uses: actions/cache/restore@v4
-      with:
-        path: ~/.cache/pre-commit
-        key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
     # Install pre-commit via python
     - name: Install pre-commit
@@ -138,15 +123,17 @@ runs:
       shell: bash
       run: pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
 
-    # Save `pre-commit` cache, so `pre-commit` hooks don’t need to be installed every time
+    # Save `pre-commit` cache, so hooks and tools don’t need to be installed every time
     # Cache is saved even if the pre-commit checks failed
-    - name: Save pre-commit environments cache
-      id: cache-pre-commit-save
-      if: always() && steps.cache-pre-commit-restore.outputs.cache-hit != 'true'
+    - name: Save pre-commit cache
+      id: save-pre-commit-cache
+      if: always() && steps.restore-pre-commit-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
-        path: ~/.cache/pre-commit
-        key: ${{ steps.cache-pre-commit-restore.outputs.cache-primary-key }}
+        path: |
+          ~/.cache/pre-commit
+          ~/pre-commit-tools
+        key: ${{ steps.restore-pre-commit-cache.outputs.cache-primary-key }}
 
     # Get commit messages and run Jira `pre-commit` hook on them
     - name: Run jira pre-commit hook
