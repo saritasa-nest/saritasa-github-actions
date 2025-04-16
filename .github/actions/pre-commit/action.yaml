@@ -136,7 +136,7 @@ runs:
     # Run `pre-commit` checks (what checks to run are taken from the `.pre-commit-config.yaml`)
     - name: Run pre-commit checks
       shell: bash
-      run: pre-commit run --show-diff-on-failure --color=always --all-files
+      run: pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
 
     # Save `pre-commit` cache, so `pre-commit` hooks don’t need to be installed every time
     # Cache is saved even if the pre-commit checks failed
