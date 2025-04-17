@@ -107,4 +107,4 @@ jobs:
           ${{ inputs.HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
-          'deploy_path=${{ inputs.DEPLOY_PATH }} \
+          'deploy_path=${{ inputs.DEPLOY_PATH }}'
