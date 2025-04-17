@@ -18,6 +18,11 @@ on:
         required: true
         type: string
         description: 'The address of the server'
+      server_port:
+        required: false
+        type: string
+        default: '22'
+        description: 'The port of the server'
       username:
         type: string
         required: true
@@ -84,7 +89,7 @@ jobs:
       # Adding server ip to known_hosts
       - name: Update known_hosts
         run: |
-          ssh-keyscan -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ inputs.SERVER_PORT }} -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
 
       # Rollback of the release
       - name: Ansistrano rollback
@@ -96,6 +101,7 @@ jobs:
           ANSIBLE_PIPELINING: True
           # User for connect via ssh (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_REMOTE_USER)
           ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}
+          ANSIBLE_REMOTE_PORT: ${{ inputs.SERVER_PORT }}
         run: |
           ansible-playbook -i \
           ${{ inputs.HOST }}, \
