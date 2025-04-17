@@ -95,7 +95,7 @@ jobs:
       # Adding server ip to known_hosts
       - name: Update known_hosts
         run: |
-          ssh-keyscan -p ${{ env.SERVER_PORT }} -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ inputs.SERVER_PORT }} -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
 
       # Deploy the project
       - name: Ansistrano deploy
