@@ -14,7 +14,7 @@ on:
   workflow_call:
     inputs:
       # Build configuration
-      host:
+      server_host:
         required: true
         type: string
         description: 'The address of the server'
@@ -89,7 +89,7 @@ jobs:
       # Adding server ip to known_hosts
       - name: Update known_hosts
         run: |
-          ssh-keyscan -p ${{ inputs.SERVER_PORT }} -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ inputs.SERVER_PORT }} -H ${{ inputs.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       # Rollback of the release
       - name: Ansistrano rollback
@@ -104,7 +104,7 @@ jobs:
           ANSIBLE_REMOTE_PORT: ${{ inputs.SERVER_PORT }}
         run: |
           ansible-playbook -i \
-          ${{ inputs.HOST }}, \
+          ${{ inputs.SERVER_HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
           'deploy_path=${{ inputs.DEPLOY_PATH }}'
