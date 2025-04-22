@@ -14,10 +14,15 @@ on:
   workflow_call:
     inputs:
       # Build configuration
-      host:
+      server_host:
         required: true
         type: string
         description: 'The address of the server'
+      server_port:
+        required: false
+        type: string
+        default: '22'
+        description: 'The port of the server'
       username:
         type: string
         required: true
@@ -40,8 +45,8 @@ on:
         description: 'Specify the current version of Python to install the current version of ansible'
       ansible_version:
         required: true
-        type: number
-        default: 2.16.6
+        type: string
+        default: '2.16.6'
         description: 'Specify the current version of Ansible to install'
       runner:
         required: false
@@ -84,7 +89,7 @@ jobs:
       # Adding server ip to known_hosts
       - name: Update known_hosts
         run: |
-          ssh-keyscan -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ inputs.SERVER_PORT }} -H ${{ inputs.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       # Rollback of the release
       - name: Ansistrano rollback
@@ -96,9 +101,10 @@ jobs:
           ANSIBLE_PIPELINING: True
           # User for connect via ssh (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_REMOTE_USER)
           ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}
+          ANSIBLE_REMOTE_PORT: ${{ inputs.SERVER_PORT }}
         run: |
           ansible-playbook -i \
-          ${{ inputs.HOST }}, \
+          ${{ inputs.SERVER_HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
-          'deploy_path=${{ inputs.DEPLOY_PATH }} \
+          'deploy_path=${{ inputs.DEPLOY_PATH }}'

@@ -11,10 +11,15 @@ on:
   workflow_call:
     inputs:
       # Build configuration
-      host:
+      server_host:
         required: true
         type: string
         description: 'The address of the server'
+      server_port:
+        required: false
+        type: string
+        default: '22'
+        description: 'The port of the server'
       username:
         type: string
         required: true
@@ -90,7 +95,7 @@ jobs:
       # Adding server ip to known_hosts
       - name: Update known_hosts
         run: |
-          ssh-keyscan -H ${{ inputs.HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ inputs.SERVER_PORT }} -H ${{ inputs.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       # Deploy the project
       - name: Ansistrano deploy
@@ -103,9 +108,10 @@ jobs:
           # We increase the performance of the pipeline (See https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-pipelining)
           ANSIBLE_PIPELINING: True
           ANSIBLE_REMOTE_USER: ${{ inputs.USERNAME }}
+          ANSIBLE_REMOTE_PORT: ${{ inputs.SERVER_PORT }}
         run: |
           ansible-playbook -i \
-          ${{ inputs.HOST }}, \
+          ${{ inputs.SERVER_HOST }}, \
           ${{ inputs.PLAYBOOK_PATH }} \
           --extra-vars \
           "ansistrano_release_version=`date -u +%Y-%m-%d-%H%M%SZ` \
