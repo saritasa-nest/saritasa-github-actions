@@ -28,7 +28,7 @@ runs:
         exit 0
 
     - name: setup environment
-      uses: ./../prepare-vulns-secrets-env
+      uses: saritasa-nest/saritasa-github-actions/.github/actions/prepare-vulns-secrets-env@feature/vulns-check-transfer
 
     - name: run trivy vulnerability scanner in fs mode
       uses: aquasecurity/trivy-action@0.30.0
