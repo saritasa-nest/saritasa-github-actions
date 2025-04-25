@@ -1,16 +1,10 @@
 name: secret-checks
 description: this check finds the unencrypted secrets in the code
 inputs:
-  enable-trivy-check:
+  enable-vulns-check:
     description: |
-      enable trivy check
+      enable vulns check
       https://aquasecurity.github.io/trivy/
-    required: true
-    default: "false"
-  enable-gitleaks-check:
-    description: |
-      enable gitleaks check
-      https://github.com/gitleaks/gitleaks-action
     required: true
     default: "false"
   enable-pr-comment:
@@ -22,18 +16,13 @@ inputs:
   github-token:
     description: github token secret
     required: true
-  gitleaks-license:
-    description: gitleaks license secret
-    required: true
-  gitleaks-slack-webhook:
-    description: slack webhook secret for team-devops-expose-secrets channel
-    required: true
+
 runs:
   using: composite
   steps:
 
     - name: exit if checks are disabled
-      if: inputs.enable-trivy-check == 'false' && inputs.enable-gitleaks-check == 'false'
+      if: inputs.enable-vulns-check == 'false'
       shell: bash
       run: |
         exit 0
@@ -65,53 +54,30 @@ runs:
         version: v0.56.2
 
     - name: run trivy vulnerability scanner in fs mode
-      uses: aquasecurity/trivy-action@0.29.0
-      if: inputs.enable-trivy-check == 'true'
-      id: trivy-check
+      uses: aquasecurity/trivy-action@0.30.0
+      if: inputs.enable-vulns-check == 'true'
+      id: trivy-vulns-check
       with:
         scan-type: fs
         scan-ref: .
         format: sarif
         exit-code: 1
-        output: trivy-results.sarif
+        output: vulns-results.sarif
         skip-setup-trivy: true
-        scanners: secret
+        scanners: vuln
       env:
         TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
 
-    - name: add trivy failure check results to data file
+    - name: add trivy failure vulns check results to data file
       shell: bash
-      if: always() && steps.trivy-check.conclusion == 'failure'
+      if: always() && steps.trivy-vulns-check.conclusion == 'failure'
       run: |
-        python3 ${{ github.action_path }}/scripts/sarif-to-json.py trivy-results.sarif trivy-output.json trivy
+        python3 ${{ github.action_path }}/scripts/sarif-to-json.py vulns-results.sarif vulns-output.json vulns
 
-        # Add the contents of the trivy-output.json file to data.json, from which 
+        # Add the contents of the vulns-output.json file to data.json, from which 
         # notifications about the results of secret checks are generated
-        jq -s '.[0] * .[1]' trivy-output.json data.json | sponge data.json
+        jq -s '.[0] * .[1]' vulns-output.json data.json | sponge data.json
         echo reactions="confused" > $GITHUB_ENV
-
-    - name: run gitleaks check
-      uses: gitleaks/gitleaks-action@v2
-      if: always() && inputs.enable-gitleaks-check == 'true'
-      id: gitleaks-check
-      env:
-        GITHUB_TOKEN: ${{inputs.github-token}}
-        GITLEAKS_LICENSE: ${{inputs.gitleaks-license}}
-        GITLEAKS_ENABLE_COMMENTS: false
-        GITLEAKS_ENABLE_SUMMARY: false
-
-    - name: add gitleaks check results to data file
-      shell: bash
-      if: always() && inputs.enable-gitleaks-check == 'true'
-      run: |
-        python3 ${{ github.action_path }}/scripts/sarif-to-json.py results.sarif gitleaks-output.json gitleaks
-
-        # Add the contents of the gitleaks-output.json file to data.json, from which 
-        # notifications about the results of secret checks are generated
-        if [[ -f gitleaks-output.json ]]; then
-          jq -s '.[0] * .[1]' gitleaks-output.json data.json | sponge data.json
-          echo reactions="confused" > $GITHUB_ENV
-        fi
 
     - name: create pr comment with checks results
       shell: bash
@@ -135,7 +101,7 @@ runs:
       with:
         issue-number: ${{ github.event.number }}
         comment-author: "github-actions[bot]"
-        body-includes: Summary of the secrets check
+        body-includes: Summary of the vulns check
 
     - name: upload checks results as a pr comment
       if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
@@ -147,20 +113,3 @@ runs:
         edit-mode: replace
         reactions: ${{ env.reactions || 'laugh' }}
         reactions-edit-mode: replace
-
-    - name: prepare generated message for slack
-      shell: bash
-      if: always()
-      run: |
-        python3 ${{ github.action_path }}/scripts/generate-message.py \
-          ${{ github.action_path }}/templates/slack-message-template.j2 \
-          data.json \
-          slack-message.json
-
-    - name: send message to slack
-      if: always()
-      shell: bash
-      run: |
-        if [[ -s "slack-message.json" ]]; then
-          curl -X POST -H 'Content-type: application/json' --data @slack-message.json ${{inputs.gitleaks-slack-webhook}}
-        fi

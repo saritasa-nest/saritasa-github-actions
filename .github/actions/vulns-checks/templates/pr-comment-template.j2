@@ -1,0 +1,28 @@
+{%- macro fileLink(file, ref) -%}
+[{{- file.name }}]({{ repoUrl }}/blob/{{ ref }}/{{ file.name }}#L{{ file.startLine }}-L{{ file.endLine }})
+{%- endmacro -%}
+
+# Summary of the vulns check  
+
+{% if vulns %}
+**❗You have vulnerabilities in your code**
+
+{%- set repoUrl = "https://github.com/" + github.repo %}
+
+## vulns
+
+{%- set vulnsFiles = [] %}
+{%- for fileName, files in vulns.files.items() %}
+  {%- for file in files %}
+    {%- set vulnsFiles = vulnsFiles.append(file) %}
+  {%- endfor %}
+{%- endfor %}
+
+|| File | Severity | Package | Installed Version | Fixed Version | Description |
+|---|---|---|---|---|---|---|
+{%- for file in vulnsFiles %}
+| {{ loop.index }} | {{ fileLink(file, github.headRefPR) }} | {{ file.severity }} | {{ file.package }} | {{ file.installedVersion }} | {{ file.fixedVersion }} | {{ file.description }} |
+{%- endfor %}
+{% else %}
+✅ **Vulnerabilities checks passed successfully!**
+{% endif %}

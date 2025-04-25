@@ -8,6 +8,7 @@ We use trivy with this parameters:
 - `format: sarif` - file format with scan results
 - `exit-code: 1` - exit code when vulnerabilities are found (default `0`)
 - `output: "trivy-results.sarif"` - file name with scan results
+- `scanners: secret` –  enable only the secret scanner, vulnerability scanning is explicitly disabled
 
 ### Gitleaks
 
@@ -215,7 +216,7 @@ sudo apt install python3
 {% endif %}
 {% endif %}
 ```
-* `/tmp/variables-data.json`
+* `tmp/variables-data.json`
 
 ```
 {
@@ -240,15 +241,15 @@ sudo apt install python3
 ```
 from jinja2 import Template
 import json
-with open("/tmp/variables-data.json") as file:
+with open("tmp/variables-data.json") as file:
     data = json.load(file)
-with open(".github/actions/checks-secrets-gitleaks/templates/slack-message-template.j2") as file:
+with open(".github/actions/secrets-checks/templates/slack-message-template.j2") as file:
     template = Template(file.read())
-with open("/tmp/message.md", "w") as file:
+with open("tmp/message.md", "w") as file:
     file.write(template.render(data=data))
 ```
 
-and run the python script 
+and run the python script
 ```
 python3 script.py
 ```

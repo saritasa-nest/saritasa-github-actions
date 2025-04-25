@@ -1,0 +1,150 @@
+### Trivy
+
+[Trivy](https://github.com/aquasecurity/trivy-action) finds vulnerabilities in the repository code. Trivy check looks at the current state of files in the repository
+
+We use trivy with this parameters:
+- `scan-type: "fs"` - type of scan (`image` - scans docker image; `fs` - scans the file system)
+- `scan-ref: "."` - scan reference(current working directory)
+- `format: sarif` - file format with scan results
+- `exit-code: 1` - exit code when vulnerabilities are found (default `0`)
+- `output: "trivy-results.sarif"` - file name with scan results
+- `scanners: vuin` –  enable only the vulnerability scanner, secret scanning is explicitly disabled
+
+### Output formatting
+
+after completing trivy and gitleaks checks we get `vulns-results.sarif` file
+
+`data.json` is generated based on `vulns-results.sarif` file and contains the information about vulnerabilities to generate a message in PR
+
+Example `data.json`:
+```
+{
+  "vulns": {
+    "totalFiles": 1,
+    "files": {
+      "package-lock.json": [
+        {
+          "name": "package-lock.json",
+          "startLine": 1301,
+          "endLine": 1324,
+          "ruleId": "CVE-2",
+          "severity": "MEDIUM",
+          "package": "micromatch",
+          "description": "The NPM package `micromatch` prior to 4.0.8 is vulnerable to ReDoS",
+          "fixedVersion": "4.0.8"
+        }
+      ]
+    },
+    "details": {
+      "driver": {
+        "fullName": "Trivy Vulnerability Scanner",
+        "informationUri": "https://github.com/aquasecurity/trivy",
+        "name": "Trivy",
+        "rules": [
+          {
+            "id": "CVE-2",
+            "name": "LanguageSpecificPackageVulnerability",
+            "shortDescription": {
+              "text": "micromatch: vulnerable to Regular Expression Denial of Service"
+            },
+            "fullDescription": {
+              "text": "The NPM package `micromatch` prior to 4.0.8 is vulnerable to ReDoS."
+            },
+            "defaultConfiguration": {
+              "level": "warning"
+            },
+            "helpUri": "https://avd.aquasec.com/nvd/cve-2",
+            "help": {
+              "text": "Vulnerability CVE-2\nSeverity: MEDIUM\nPackage: micromatch\nFixed Version: 4.0.8\nLink: [CVE-2](https://avd.aquasec.com/nvd/cve-2)\nThe NPM package `micromatch` prior to 4.0.8 is vulnerable to  ReDoS.",
+              "markdown": "**Vulnerability CVE-2**\n| Severity | Package | Fixed Version | Link |\n| --- | --- | --- | --- |\n|MEDIUM|micromatch|4.0.8|[CVE-2](https://avd.aquasec.com/nvd/cve-2)|\n\nThe NPM package `micromatch` prior to 4.0.8 is vulnerable to ReDoS."
+            },
+            "properties": {
+              "precision": "very-high",
+              "security-severity": "5.3",
+              "tags": [
+                "vulnerability",
+                "security",
+                "MEDIUM"
+              ]
+            }
+          }
+        ],
+        "version": "0.56.2"
+      }
+    },
+    "github": {
+      "repo": "saritasa-nest/probot-tests",
+      "headRef": "feature/add-checks-secrets",
+      "actor": "darliiin",
+      "eventName": "pull_request",
+      "eventNumber": "216"
+    }
+  }
+}
+```
+
+Using [jinja2-action](https://github.com/cuchi/jinja2-action) and template `pr-comment-template.j2`
+we are creating
+1) comment for PR
+
+### If you want to test the jinja template locally:
+
+1) install dependencies
+```
+sudo apt update
+sudo apt install python3
+```
+
+2) prepare the following files:
+
+* `.github/actions/vulns-checks/templates/pr-comment-template.j2
+
+```
+{% if data.file_names %}
+*Exposed vulnerabilities found in [commit](https://github.com/{{data.github.repository}}/commit/{{data.github.sha}}) by [{{data.github.actor}}](https://github.com/{{data.github.actor}})*
+*File list:*
+{% for file in data.file_names %}
+- [{{file}}](https://github.com/{{data.github.repository}}/blob/{{data.github.ref}}/{{file}})
+{% endfor %}
+{% if data.github.event.name == 'pull_request' %}
+  *Current [PR](https://github.com/{{data.github.repository}}/pull/{{data.github.event.number}})*
+{% endif %}
+{% endif %}
+```
+* `tmp/variables-data.json`
+
+```
+{
+  "file_names": [
+    "one-vulns.json",
+    "two-vulns.json"
+  ],
+  "github": {
+    "repository": "saritasa-nest/probot-tests",
+    "ref": "refs/pull/197/merge",
+    "sha": "7b2a39630ceddf35e56852f3c3d3ad0dc9cd758d",
+    "actor": "darliiin",
+    "event": {
+      "name": "pull_request",
+      "number": "197"
+    }
+  }
+}
+```
+
+* `script.py`
+```
+from jinja2 import Template
+import json
+with open("tmp/variables-data.json") as file:
+    data = json.load(file)
+with open(".github/actions/vulns-checks/templates/pr-comment-template.j2") as file:
+    template = Template(file.read())
+with open("tmp/message.md", "w") as file:
+    file.write(template.render(data=data))
+```
+
+and run the python script
+```
+python3 script.py
+```
