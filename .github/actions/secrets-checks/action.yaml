@@ -39,7 +39,7 @@ runs:
         exit 0
 
     - name: setup environment
-      uses: ../vulns-check-transfer
+      uses: ./.github/actions/prepare-vulns-secrets-env
 
     - name: run trivy vulnerability scanner in fs mode
       uses: aquasecurity/trivy-action@0.29.0
