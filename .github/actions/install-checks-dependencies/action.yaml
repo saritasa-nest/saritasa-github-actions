@@ -1,0 +1,36 @@
+name: Install-checks-dependencies
+description: Install dependencies needed to run vulnerability and secrets checks
+inputs:
+  trivy-version:
+    description: 'Trivy version to install'
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo apt update
+        sudo apt-get install -y moreutils python3-pip
+        pip3 install jinja2
+    - name: Prepare data.json for pr and slack comments
+      shell: bash
+      run: |
+        jq -n \
+          --arg repo "${{github.repository}}" \
+          --arg pushBranch "${{ github.ref_name }}" \
+          --arg pullRequestBranch "${{ github.head_ref }}" \
+          --arg actor "${{github.actor}}" \
+          --arg eventName "${{github.event_name}}" \
+          --arg eventNumber "${{github.event.number}}" \
+          --arg commitSha "${{github.sha}}" \
+          '{github: {repo: $repo, pushBranch: $pushBranch, pullRequestBranch: $pullRequestBranch, actor: $actor, eventName: $eventName, eventNumber: $eventNumber, commitSha: $commitSha}}' \
+          > data.json
+    - name: Install trivy
+      uses: aquasecurity/setup-trivy@v0.2.3
+      with:
+        version: ${{inputs.trivy-version}}

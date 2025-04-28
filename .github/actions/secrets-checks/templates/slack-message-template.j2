@@ -18,10 +18,10 @@
 {%- endmacro %}
 
 {%- if github.eventName == 'pull_request' %}
-  {%- set headRef = github.headRefPR %}
+  {%- set headRef = github.pullRequestBranch %}
 {%- endif -%}
 {%- if github.eventName == 'push' %}
-  {%- set headRef = github.headRefPush %}
+  {%- set headRef = github.pushBranch %}
 {%- endif -%}
 
 {

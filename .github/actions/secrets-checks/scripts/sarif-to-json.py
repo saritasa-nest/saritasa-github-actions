@@ -185,8 +185,8 @@ def convert_trivy_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
         },
         "github": {
             "repo": "saritasa-nest/probot-tests",
-            "headRefPush": "refs/pull/238/merge",
-            "headRefPR": "darliiin-patch-1",
+            "pushBranch": "refs/pull/238/merge",
+            "pullRequestBranch": "darliiin-patch-1",
             "actor": "darliiin",
             "eventName": "pull_request",
             "eventNumber": "238",
