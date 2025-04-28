@@ -41,7 +41,7 @@ runs:
     - name: setup environment
       uses: saritasa-nest/saritasa-github-actions/.github/actions/prepare-vulns-secrets-env@v3.8-dev
 
-    - name: run trivy vulnerability scanner in fs mode
+    - name: run trivy secret scanner in fs mode
       uses: aquasecurity/trivy-action@0.29.0
       if: inputs.enable-trivy-check == 'true'
       id: trivy-check

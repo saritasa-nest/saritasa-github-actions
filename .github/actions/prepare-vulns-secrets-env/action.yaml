@@ -1,7 +1,7 @@
 name: 'prepare-vulns-secrets-env'
 description: 'prepare everything needed to run vulnerability and secrets checks'
 runs:
-  using: 'composite'
+  using: composite
   steps:
     - name: install dependencies
       shell: bash
