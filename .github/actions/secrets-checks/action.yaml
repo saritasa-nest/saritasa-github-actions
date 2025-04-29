@@ -42,10 +42,6 @@ runs:
       shell: bash
       run: |
         exit 0
-    - name: Setup environment
-      uses: saritasa-nest/saritasa-github-actions/.github/actions/install-checks-dependencies@feature/checks-test
-      with: 
-        trivy-version: ${{inputs.trivy-version}}
     - name: Run trivy secret scanner in fs mode
       uses: aquasecurity/trivy-action@0.29.0
       if: inputs.enable-trivy-check == 'true'
