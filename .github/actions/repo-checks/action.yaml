@@ -51,7 +51,17 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: "3.13"
+    - name: Cache apt packages
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: moreutils python3-pip jq
+        version: 1.1
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ runner.os }}-jinja2
     - name: Install dependencies
       shell: bash
       run: |
@@ -70,7 +80,7 @@ runs:
           --arg eventNumber "${{github.event.number}}" \
           --arg commitSha "${{github.sha}}" \
           '{github: {repo: $repo, pushBranch: $pushBranch, pullRequestBranch: $pullRequestBranch, actor: $actor, eventName: $eventName, eventNumber: $eventNumber, commitSha: $commitSha}}' \
-          > data.json
+        > data.json
     - name: Install trivy
       uses: aquasecurity/setup-trivy@v0.2.3
       with:
