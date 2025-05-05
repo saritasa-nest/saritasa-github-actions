@@ -1,6 +1,6 @@
 ### Trivy
 
-[Trivy](https://github.com/aquasecurity/trivy-action) finds unencrypted secrets in the repository code. Trivy check looks at the current state of files in the repository
+[Trivy](https://github.com/aquasecurity/trivy-action) finds unencrypted secrets and vulnerabilities in the repository code. Trivy check looks at the current state of files in the repository
 
 We use trivy with this parameters:
 - `scan-type: "fs"` - type of scan (`image` - scans docker image; `fs` - scans the file system)
@@ -8,26 +8,15 @@ We use trivy with this parameters:
 - `format: sarif` - file format with scan results
 - `exit-code: 1` - exit code when vulnerabilities are found (default `0`)
 - `output: "trivy-results.sarif"` - file name with scan results
-- `scanners: secret` –  enable only the secret scanner, vulnerability scanning is explicitly disabled
+- `severity: HIGH,CRITICAL` - only report vulnerabilities with HIGH or CRITICAL severity levels (other levels such as LOW and MEDIUM will be ignored)
 - env `TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2` to avoid GitHub Container Registry (GHCR) rate limits and ensure consistent access to Trivy's vulnerability database.
 
 ### Gitleaks
 
 [Gitleaks](https://github.com/gitleaks/gitleaks) is a tool for detecting and preventing hardcoded secrets (i.e. ssh pem keys, our files ending with .secrets) exposed in open text in the repository. Gitleaks check the contents of files that were changed in a commit
 
-We use our own gitleaks configuration `gitleaks.toml`, so gitleaks can detect all unencrypted files with extensions:
-
-1) *.secret
-2) *-secret.yaml
-3) *-secrets.yaml
-4) *-secret.yml
-5) *-secrets.yml
-6) *.pem
-7) *.key
-
-and also `useDefault = true` extends the gitleaks configuration with additional values that tell gitleaks what to consider a secret. More details https://github.com/zricethezav/gitleaks/blob/master/config/gitleaks.toml
-
-`gitleaks.toml` is located at the root of the repository, automatically detected and used by gitleaks-action.
+We use the default Gitleaks configuration (`useDefault = true`), which enables detection of a wide range of common secret patterns out of the box.
+You can find more details about the default rules here: https://github.com/zricethezav/gitleaks/blob/master/config/gitleaks.toml
 
 #### environment variables
 

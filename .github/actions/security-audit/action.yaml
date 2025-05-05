@@ -33,7 +33,7 @@ inputs:
     default: "1.1"
   enable-pr-comment:
     description: Flag whether secrets leaks and vulnerabilities scan info should be added as PR comment
-    required: false
+    required: true
     default: "true"
   github-token:
     description: Github token secret
@@ -108,6 +108,7 @@ runs:
         exit-code: 1
         output: trivy-results.sarif
         skip-setup-trivy: true
+        severity: HIGH,CRITICAL
       env:
         TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
 
