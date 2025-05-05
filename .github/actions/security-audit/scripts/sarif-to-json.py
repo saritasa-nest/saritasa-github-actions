@@ -426,17 +426,22 @@ def convert_trivy_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
     }
     """
     secrets = defaultdict(list)
-    vulnerability_rule = defaultdict(list)
-    vulnerability = defaultdict(list)
-    
-    vulnerabilities_info = {}
+    vulnerability_rules = defaultdict(list)
+    vulnerabilities = defaultdict(list)
+
+    # Preprocess rules to extract vulnerability descriptions.
+    # This allows us to later supplement scan results by matching rule ID → description.
     for rule in run['tool']['driver']['rules']:
         rule_id = rule['id']
         if 'vulnerability' in rule['properties']['tags']:
-            vulnerability_rule[rule_id] = {
+            vulnerability_rules[rule_id] = {
                 'description': rule['fullDescription']['text'].rstrip(),
             }
 
+    # Extract the following data from scan results:
+    #   file name, start and end line numbers (to generate precise links to the content), and severity level.
+    # For vulnerabilities, we additionally extract 
+    #   package name, installed and fixed versions, rule description.
     for item in run['results']:
         location, file_name, start_line, end_line = extract_base_info(item)
         # To specify the error type, need to convert the `severity` variable.
@@ -451,36 +456,32 @@ def convert_trivy_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
         # To: 
         #   CRITICAL
         severity = item['message']['text'].split('Severity: ')[1].split('\n')[0].strip()
-        if item['ruleId'] in vulnerability_rule:
+        default = {
+            'name': file_name,
+            'startLine': start_line,
+            'endLine': end_line,
+            'ruleId': item['ruleId'],
+            'severity': severity,
+        }
+        if item['ruleId'] in vulnerability_rules:
             text = item['message']['text']
             package = text.split('Package: ')[1].split('\n')[0].strip()
             installed_version = text.split('Installed Version: ')[1].split('\n')[0].strip()
             fixed_version = text.split('Fixed Version: ')[1].split('\n')[0].strip()
-            description = vulnerability_rule.get(item['ruleId'], {}).get('description')
-            vulnerability[file_name].append({
-                'name': file_name,
-                'startLine': start_line,
-                'endLine': end_line,
-                'ruleId': item['ruleId'],
-                'severity': severity,
+            description = vulnerability_rules.get(item['ruleId'], {}).get('description')
+            vulnerabilities[file_name].append({
+                **default,
                 'package': package,
                 'installedVersion': installed_version,
                 'fixedVersion': fixed_version,
                 'description': description,
             })
         else:
-            secrets[file_name].append({
-                'name': file_name,
-                'startLine': start_line,
-                'endLine': end_line,
-                'ruleId': item['ruleId'],
-                'severity': severity,
-            })
-        
+            secrets[file_name].append(default.copy())
     result = {
         'vulnerabilities': {
-            'totalFiles': len(vulnerability.keys()),
-            'files': asc_sort_dict_by_keys(vulnerability),
+            'totalFiles': len(vulnerabilities.keys()),
+            'files': asc_sort_dict_by_keys(vulnerabilities),
             'details': run['tool'],
         },
         'trivy': {
