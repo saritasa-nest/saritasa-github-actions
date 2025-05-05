@@ -148,7 +148,6 @@ runs:
       shell: bash
       if: always()
       run: |
-        set -euo pipefail
         if [[ "${{ inputs.enable-vulnerability-checks }}" == "true" ]]; then
           TEMPLATE="${{ github.action_path }}/templates/pr-comment-vulnerabilities-template.j2"
         else
@@ -194,7 +193,7 @@ runs:
       uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{ github.event.number }}
-        comment-id: ${{ steps.find-vulnerabilities-comment.outputs.comment-id }} 
+        comment-id: ${{ steps.find-vulnerabilities-comment.outputs.comment-id }}
         body-path: pr-comment.md
         edit-mode: replace
         reactions: ${{ env.reactions || 'laugh' }}
