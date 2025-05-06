@@ -1,12 +1,20 @@
 name: security-audit
-description: This check finds the unencrypted secrets and vulnerabilities in the code
+description: Find unencrypted secrets and vulnerabilities in the code with Gitleaks and Trivy
 inputs:
+  cache-version:
+    description: Bump this value to reset the apt package cache
+    required: false
+    default: "1.1"
   enable-gitleaks-check:
     description: |
       Enable gitleaks check
       https://github.com/gitleaks/gitleaks-action
     required: true
     default: "false"
+  enable-pr-comment:
+    description: Flag whether secrets leaks and vulnerabilities scan info should be added as PR comment
+    required: true
+    default: "true"
   enable-trivy-check:
     description: |
       Enable trivy check
@@ -19,22 +27,6 @@ inputs:
       https://aquasecurity.github.io/trivy/
     required: true
     default: "false"
-  trivy-version:
-    description: Trivy version to install
-    required: false
-    default: "v0.61.0"
-  python-version:
-    description: Python version to install
-    required: false
-    default: "3.13"
-  cache-version:
-    description: Bump this value to reset the apt package cache
-    required: false
-    default: "1.1"
-  enable-pr-comment:
-    description: Flag whether secrets leaks and vulnerabilities scan info should be added as PR comment
-    required: true
-    default: "true"
   github-token:
     description: Github token secret
     required: true
@@ -42,8 +34,16 @@ inputs:
     description: Gitleaks license secret
     required: true
   gitleaks-slack-webhook:
-    description: Slack webhook secret for team-devops-expose-secrets channel
+    description: Slack webhook secret for `team-devops-expose-secrets` channel
     required: true
+  python-version:
+    description: Python version to install
+    required: false
+    default: "3.13"
+  trivy-version:
+    description: Trivy version to install
+    required: false
+    default: "v0.61.0"
 
 runs:
   using: composite
@@ -57,14 +57,14 @@ runs:
     - name: Cache apt packages
       uses: awalsh128/cache-apt-pkgs-action@v1.4.3
       with:
-        packages: moreutils python3-pip jq
+        packages: moreutils python3-pip
         version: ${{inputs.cache-version}}
 
     - name: Cache pip
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: pip-${{ runner.os }}-jinja2
+        key: pip-${{runner.os}}-jinja2
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -88,8 +88,8 @@ runs:
       run: |
         jq -n \
           --arg repo "${{github.repository}}" \
-          --arg pushBranch "${{ github.ref_name }}" \
-          --arg pullRequestBranch "${{ github.head_ref }}" \
+          --arg pushBranch "${{github.ref_name}}" \
+          --arg pullRequestBranch "${{github.head_ref}}" \
           --arg actor "${{github.actor}}" \
           --arg eventName "${{github.event_name}}" \
           --arg eventNumber "${{github.event.number}}" \
@@ -116,7 +116,7 @@ runs:
       shell: bash
       if: always() && steps.trivy-check.conclusion == 'failure'
       run: |
-        python3 ${{ github.action_path }}/scripts/sarif-to-json.py trivy-results.sarif trivy-output.json trivy
+        python3 ${{github.action_path}}/scripts/sarif-to-json.py trivy-results.sarif trivy-output.json trivy
         # Add the contents of the trivy-output.json file to data.json, from which 
         # notifications about the results of secret checks are generated
         jq -s '.[0] * .[1]' trivy-output.json data.json | sponge data.json
@@ -136,7 +136,7 @@ runs:
       shell: bash
       if: always() && inputs.enable-gitleaks-check == 'true'
       run: |
-        python3 ${{ github.action_path }}/scripts/sarif-to-json.py results.sarif gitleaks-output.json gitleaks
+        python3 ${{github.action_path}}/scripts/sarif-to-json.py results.sarif gitleaks-output.json gitleaks
         # Add the contents of the gitleaks-output.json file to data.json, from which 
         # notifications about the results of secret checks are generated
         if [[ -f gitleaks-output.json ]]; then
@@ -144,67 +144,76 @@ runs:
           echo reactions="confused" > $GITHUB_ENV
         fi
 
-    - name: Create file with scan results
+    - name: Prepare PR comment file
       shell: bash
       if: always()
       run: |
-        if [[ "${{ inputs.enable-vulnerability-checks }}" == "true" ]]; then
-          TEMPLATE="${{ github.action_path }}/templates/pr-comment-vulnerabilities-template.j2"
-        else
-          TEMPLATE="${{ github.action_path }}/templates/pr-comment-secrets-template.j2"
+        TEMPLATES=()
+        if [[ "${{inputs.enable-vulnerability-checks}}" == "true" ]]; then
+          TEMPLATES+=("${{github.action_path}}/templates/pr-comment-vulnerabilities-template.j2")
         fi
-        python3 ${{ github.action_path }}/scripts/generate-message.py \
-          "$TEMPLATE" \
-          data.json \
-          pr-comment.md
-        cat pr-comment.md > $GITHUB_STEP_SUMMARY
+        if [[ "${{inputs.enable-gitleaks-check}}" == "true" ]]; then
+          TEMPLATES+=("${{github.action_path}}/templates/pr-comment-secrets-template.j2")
+        fi
+        for TEMPLATE in "${TEMPLATES[@]}"; do
+          if [[ "$TEMPLATE" == *vulnerabilities* ]]; then
+            OUT=pr-comment-vulnerabilities.md
+          else
+            OUT=pr-comment-secrets.md
+          fi
+          python3 ${{github.action_path}}/scripts/generate-message.py "$TEMPLATE" data.json "$OUT"
+          cat "$OUT" >> $GITHUB_STEP_SUMMARY
+        done
 
     - name: Find PR comment with secret-check results
       uses: peter-evans/find-comment@v3
-      if: always() && github.event_name == 'pull_request'
+      if: always()
       id: find-secrets-comment
       with:
-        issue-number: ${{ github.event.number }}
+        issue-number: ${{github.event.number}}
         comment-author: "github-actions[bot]"
         body-includes: Summary of the secrets check
 
+    - name: Upload secrets-checks results as a PR comment
+      if: always() && inputs.enable-pr-comment == 'true' && steps.find-secrets-comment.outputs.comment-id != ''
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        issue-number: ${{github.event.number}}
+        comment-id: ${{steps.find-secrets-comment.outputs.comment-id}}
+        body-path: pr-comment-secrets.md
+        edit-mode: replace
+        reactions: ${{env.reactions || 'laugh'}}
+        reactions-edit-mode: replace
+
     - name: Find PR comment with vulnerabilities-check results
       uses: peter-evans/find-comment@v3
-      if: always() && github.event_name == 'pull_request'
+      if: always()
       id: find-vulnerabilities-comment
       with:
-        issue-number: ${{ github.event.number }}
+        issue-number: ${{github.event.number}}
         comment-author: "github-actions[bot]"
         body-includes: Summary of the vulnerabilities check
 
-    - name: Upload secrets-checks results as a PR comment
-      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true' && steps.find-secrets-comment.outputs.comment-id != ''
-      uses: peter-evans/create-or-update-comment@v4
-      with:
-        issue-number: ${{ github.event.number }}
-        comment-id: ${{ steps.find-secrets-comment.outputs.comment-id }}
-        body-path: pr-comment.md
-        edit-mode: replace
-        reactions: ${{ env.reactions || 'laugh' }}
-        reactions-edit-mode: replace
-
     - name: Upload vulnerabilities-checks results as a PR comment
-      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true' && steps.find-vulnerabilities-comment.outputs.comment-id != ''
+      if: always() && inputs.enable-pr-comment == 'true' && steps.find-vulnerabilities-comment.outputs.comment-id != ''
       uses: peter-evans/create-or-update-comment@v4
       with:
-        issue-number: ${{ github.event.number }}
-        comment-id: ${{ steps.find-vulnerabilities-comment.outputs.comment-id }}
-        body-path: pr-comment.md
+        issue-number: ${{github.event.number}}
+        comment-id: ${{steps.find-vulnerabilities-comment.outputs.comment-id}}
+        body-path: pr-comment-vulnerabilities.md
         edit-mode: replace
-        reactions: ${{ env.reactions || 'laugh' }}
+        reactions: ${{env.reactions || 'laugh'}}
         reactions-edit-mode: replace
 
+    # We only send Slack notifications about unencrypted secrets (not vulnerabilities).
+    # Vulnerability notifications are omitted to avoid excessive noise in the Slack channel,
+    # which could make it difficult to track critical secret leaks.
     - name: Prepare and send message to Slack
       shell: bash
       if: always() && (inputs.enable-gitleaks-check == 'true' || inputs.enable-trivy-check == 'true')
       run: |
-        python3 ${{ github.action_path }}/scripts/generate-message.py \
-          ${{ github.action_path }}/templates/slack-message-template.j2 \
+        python3 ${{github.action_path}}/scripts/generate-message.py \
+          ${{github.action_path}}/templates/slack-message-template.j2 \
           data.json \
           slack-message.json
         if [[ -s "slack-message.json" ]]; then
