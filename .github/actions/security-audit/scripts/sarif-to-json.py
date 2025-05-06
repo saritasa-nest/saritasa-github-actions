@@ -1,25 +1,21 @@
 import argparse
 import json
 import os
-import re
 from collections import defaultdict
-from typing import Dict, NamedTuple
+from typing import NamedTuple
 
 class BaseInfo(NamedTuple):
     """
-    A named tuple for base information
-
-    Named tuples assign meaning to each position in a tuple and allow for more readable, self-documenting code
-    They add the ability to access fields by name instead of position index
+    Base information of the scan result items.
     """
-    location: Dict
+    location: dict
     file_name: str
     start_line: int
     end_line: int
 
-def asc_sort_dict_by_keys(obj: Dict[str, any]) -> Dict[str, any]:
+def asc_sort_dict_by_keys(obj: dict[str, any]) -> dict[str, any]:
     """
-    Sorts the map by keys
+    Sorts a dictionary by keys in ascending order
 
     Args:
         obj (dict): Input dictionary
@@ -28,7 +24,7 @@ def asc_sort_dict_by_keys(obj: Dict[str, any]) -> Dict[str, any]:
     """
     return dict(sorted(obj.items()))
 
-def extract_base_info(item: Dict[str, any]) -> BaseInfo:
+def extract_base_info(item: dict[str, any]) -> BaseInfo:
     """
     Extracts base information from a scan result item
 
@@ -43,7 +39,7 @@ def extract_base_info(item: Dict[str, any]) -> BaseInfo:
     end_line = location['region']['endLine']
     return BaseInfo(location, file_name, start_line, end_line)
 
-def convert_gitleaks_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
+def convert_gitleaks_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
     Converts gitleaks analysis results into json format
 
@@ -69,7 +65,7 @@ def convert_gitleaks_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
         commitSha = item['partialFingerprints']['commitSha']
         files[file_name][file_key]['commits'].append(commitSha)
 
-    result = {
+    return {
         'gitleaks': {
             'totalFiles': len(files.keys()),
             'files': asc_sort_dict_by_keys(files),
@@ -77,9 +73,7 @@ def convert_gitleaks_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
         },
     }
 
-    return result
-
-def convert_trivy_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
+def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
     This function processes SARIF scan results and returns a dictionary 
     containing unencrypted secrets and vulnerabilities found in the scanned files.
@@ -131,18 +125,19 @@ def convert_trivy_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
             'ruleId': item['ruleId'],
             'severity': severity,
         }
-        if vulnerability_rules.get(item['ruleId']):
+        rule = vulnerability_rules.get(item['ruleId'])
+        if rule:
             text = item['message']['text']
             vulnerabilities[file_name].append({
                 'package': text.split('Package: ')[1].split('\n')[0].strip(),
                 'installedVersion': text.split('Installed Version: ')[1].split('\n')[0].strip(),
                 'fixedVersion':  text.split('Fixed Version: ')[1].split('\n')[0].strip(),
-                'description': vulnerability_rules.get(item['ruleId'], {}).get('description'),
+                'description': rule.get('description'),
                 **default,
             })
         else:
             secrets[file_name].append(default.copy())
-    result = {
+    return {
         'vulnerabilities': {
             'totalFiles': len(vulnerabilities.keys()),
             'files': asc_sort_dict_by_keys(vulnerabilities),
@@ -154,7 +149,6 @@ def convert_trivy_results_to_json(run: Dict[str, any]) -> Dict[str, any]:
             'details': run['tool'],
         },
     }
-    return result
 
 def main():
     """
