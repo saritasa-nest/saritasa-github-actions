@@ -156,10 +156,9 @@ runs:
           TEMPLATES+=("${{github.action_path}}/templates/pr-comment-secrets-template.j2")
         fi
         for TEMPLATE in "${TEMPLATES[@]}"; do
+          OUT=pr-comment-secrets.md
           if [[ "$TEMPLATE" == *vulnerabilities* ]]; then
             OUT=pr-comment-vulnerabilities.md
-          else
-            OUT=pr-comment-secrets.md
           fi
           python3 ${{github.action_path}}/scripts/generate-message.py "$TEMPLATE" data.json "$OUT"
           cat "$OUT" >> $GITHUB_STEP_SUMMARY
