@@ -102,8 +102,11 @@ runs:
           fi
         done <<< "${{ inputs.tools-list }}"
 
-        # Make directory available to all subsequent actions in this job
-        echo $tools_dir >> $GITHUB_PATH
+    # Add pre-commit-tools directory to PATH for all subsequent actions in this job
+    # So even if the previous step was skipped, tools would stil be added to GITHUB_PATH
+    - name: Add pre-commit-tools to PATH
+      shell: bash
+      run: echo "$HOME/pre-commit-tools" >> $GITHUB_PATH
 
     # Setup Node.js since `terraform_fmt` depends on it
     - name: Setup node
