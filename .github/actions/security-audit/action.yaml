@@ -99,7 +99,7 @@ runs:
 
     - name: Run trivy scanner in fs mode
       uses: aquasecurity/trivy-action@0.30.0
-      if: inputs.enable-trivy-check == 'true' || inputs.enable-vulnerability-checks == 'true'
+      if: inputs.enable-trivy-check == 'true'
       id: trivy-check
       with:
         scan-type: fs
@@ -107,6 +107,7 @@ runs:
         format: sarif
         exit-code: 1
         output: trivy-results.sarif
+        scanners: secret
         skip-setup-trivy: true
         severity: HIGH,CRITICAL
       env:
@@ -121,6 +122,34 @@ runs:
         # notifications about the results of secret checks are generated
         jq -s '.[0] * .[1]' trivy-output.json data.json | sponge data.json
         echo reactions="confused" > $GITHUB_ENV
+
+    - name: Run vulnerability scanner in fs mode
+      uses: aquasecurity/trivy-action@0.30.0
+      if: inputs.enable-vulnerability-checks == 'true'
+      id: vulnerability-check
+      with:
+        scan-type: fs
+        scan-ref: .
+        format: sarif
+        exit-code: 1
+        output: vulnerability-results.sarif
+        scanners: vuln
+        skip-setup-trivy: true
+        severity: HIGH,CRITICAL
+      env:
+        TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
+
+    - name: Add vulnerability failure check results to data file
+      shell: bash
+      if: always() && steps.vulnerability-check.conclusion == 'failure'
+      run: |
+        python3 ${{github.action_path}}/scripts/sarif-to-json.py vulnerability-results.sarif vulnerability-output.json trivy
+        # Add the contents of the vulnerability-output.json file to data.json, from which 
+        # notifications about the results of secret checks are generated
+        if [[ -f vulnerability-output.json ]]; then
+          jq -s '.[0] * .[1]' vulnerability-output.json data.json | sponge data.json
+          echo reactions="confused" > $GITHUB_ENV
+        fi
 
     - name: Run gitleaks check
       uses: gitleaks/gitleaks-action@v2
@@ -152,7 +181,7 @@ runs:
         if [[ "${{inputs.enable-vulnerability-checks}}" == "true" ]]; then
           TEMPLATES+=("${{github.action_path}}/templates/pr-comment-vulnerabilities-template.j2")
         fi
-        if [[ "${{inputs.enable-gitleaks-check}}" == "true" ]]; then
+        if [[ "${{inputs.enable-gitleaks-check}}" == "true" ]] || [[ "${{inputs.enable-trivy-check}}" == "true" ]]; then
           TEMPLATES+=("${{github.action_path}}/templates/pr-comment-secrets-template.j2")
         fi
         for TEMPLATE in "${TEMPLATES[@]}"; do
@@ -166,7 +195,8 @@ runs:
 
     - name: Find PR comment with secret-check results
       uses: peter-evans/find-comment@v3
-      if: always()
+      continue-on-error: true
+      if: always() && inputs.enable-pr-comment == 'true'
       id: find-secrets-comment
       with:
         issue-number: ${{github.event.number}}
@@ -174,7 +204,7 @@ runs:
         body-includes: Summary of the secrets check
 
     - name: Upload secrets-checks results as a PR comment
-      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
+      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true' && (inputs.enable-gitleaks-check == 'true' || inputs.enable-trivy-check == 'true')
       uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{github.event.number}}
@@ -186,7 +216,8 @@ runs:
 
     - name: Find PR comment with vulnerabilities-check results
       uses: peter-evans/find-comment@v3
-      if: always()
+      continue-on-error: true
+      if: always() && inputs.enable-pr-comment == 'true'
       id: find-vulnerabilities-comment
       with:
         issue-number: ${{github.event.number}}
@@ -194,7 +225,7 @@ runs:
         body-includes: Summary of the vulnerabilities check
 
     - name: Upload vulnerabilities-checks results as a PR comment
-      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
+      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true' && inputs.enable-vulnerability-checks == 'true'
       uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{github.event.number}}
