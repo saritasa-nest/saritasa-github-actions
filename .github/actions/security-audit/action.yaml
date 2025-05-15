@@ -174,7 +174,7 @@ runs:
         body-includes: Summary of the secrets check
 
     - name: Upload secrets-checks results as a PR comment
-      if: always() && inputs.enable-pr-comment == 'true' && steps.find-secrets-comment.outputs.comment-id != ''
+      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
       uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{github.event.number}}
@@ -194,7 +194,7 @@ runs:
         body-includes: Summary of the vulnerabilities check
 
     - name: Upload vulnerabilities-checks results as a PR comment
-      if: always() && inputs.enable-pr-comment == 'true' && steps.find-vulnerabilities-comment.outputs.comment-id != ''
+      if: always() && github.event_name == 'pull_request' && inputs.enable-pr-comment == 'true'
       uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{github.event.number}}
