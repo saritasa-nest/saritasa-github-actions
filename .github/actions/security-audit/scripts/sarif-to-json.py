@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 from collections import defaultdict
 from typing import NamedTuple
 
@@ -73,6 +74,14 @@ def convert_gitleaks_results_to_json(run: dict[str, any]) -> dict[str, any]:
         },
     }
 
+def strip_tags(text):
+    """
+    Removes <p> and </p> tags (with any attributes) and all newline characters from the string.
+    This is necessary to avoid breaking markdown table formatting in the final output.
+    """
+    text = re.sub(r'<\s*/?\s*p[^>]*>', '', text)
+    return text.replace('\n', ' ')
+
 def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
     This function processes SARIF scan results and returns a dictionary 
@@ -96,8 +105,9 @@ def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
     for rule in run['tool']['driver']['rules']:
         rule_id = rule['id']
         if 'vulnerability' in rule['properties']['tags']:
+            description = strip_tags(rule['fullDescription']['text'].rstrip())
             vulnerability_rules[rule_id] = {
-                'description': rule['fullDescription']['text'].rstrip(),
+                'description': description,
             }
 
     # Extract the following data from scan results:
