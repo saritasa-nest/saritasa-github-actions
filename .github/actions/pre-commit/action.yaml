@@ -103,7 +103,7 @@ runs:
         done <<< "${{ inputs.tools-list }}"
 
     # Add pre-commit-tools directory to PATH for all subsequent actions in this job
-    # So even if the previous step was skipped, tools would stil be added to GITHUB_PATH
+    # So even if the previous step was skipped, tools would still be added to GITHUB_PATH
     - name: Add pre-commit-tools to PATH
       shell: bash
       run: echo "$HOME/pre-commit-tools" >> $GITHUB_PATH
