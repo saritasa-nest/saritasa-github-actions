@@ -124,9 +124,18 @@ runs:
     # Run `pre-commit` checks (what checks to run are taken from the `.pre-commit-config.yaml`)
     - name: Run pre-commit checks
       shell: bash
-      # `pre-commit` checks are configured to run only on the files that were changed in the PR (--from-ref <...> --to-ref <...>)
-      # This was implemented so that pre-commit reacts on the modified files only, instead of all files, in the PR
-      run: pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
+      # `pre-commit` checks are configured to run only on the files that were changed in the PR
+      # This was implemented so that pre-commit reacts on the modified in the PR files only, instead of all files
+      run: |
+        commits_range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+
+        # Get all files changed in this PR with git diff and filter out binary files 
+        # `--numstat` flag outputs two `-` for binary files instead of saying `0 0`  
+        filtered_files=$(git diff --numstat $commits_range | awk '$1 != "-" && $2 != "-" { print $3 }')
+
+        echo "Running pre-commit on the following files:"
+        echo ${filtered_files[@]} | tr ' ' '\n'
+        pre-commit run --show-diff-on-failure --color=always --files ${filtered_files[@]}
 
     # Save `pre-commit` cache, so hooks and tools don’t need to be installed every time
     # Cache is saved even if the pre-commit checks failed
@@ -160,7 +169,14 @@ runs:
           echo "https://github.com/${{ github.repository }}/commit/$commit_hash -- $commit_msg"
 
           # Skip, if committed by a user listed in ignore-commit-authors
-          echo "${{ inputs.ignore-commit-authors }}" | grep -Fxq "$author" && { echo "Skipping JIRA check for commit by $author"; continue; }
+          if [[ -n "${{ inputs.ignore-commit-authors }}" ]]; then
+            while IFS= read -r prefix; do
+              # Skip empty lines in the ignore-commit-authors list
+              [[ -z "$prefix" ]] && continue
+              # If the author name contains this prefix, skip JIRA check
+              echo "$author" | grep -Fq "$prefix" && { echo "Skipping JIRA check for commit by $author"; continue 2; }
+            done <<< "${{ inputs.ignore-commit-authors }}"
+          fi
 
           # Run the Jira pre-commit hook on each commit message
           echo "$commit_msg" > tmp_commit_msg.txt
