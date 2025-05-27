@@ -118,6 +118,7 @@ on:
 
 jobs:
   deploy:
+    # TODO: change version after PR https://github.com/saritasa-nest/saritasa-github-actions/pull/23 is approved and merged
     uses: saritasa-nest/saritasa-github-actions/.github/workflows/wpengine-deploy.yaml@feature/add-wpengine-deploy
     with:
       backup_emails: 'devops+arssu@saritasa.com'
