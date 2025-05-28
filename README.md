@@ -252,18 +252,6 @@ git push
 
 ## WPEngine reusable workflow
 
-A reusable workflow that's used to deploy files from GitHub to WPEngine. Workflow consists of three jobs: `backup` job, `deploy` job and `send-notifications` job:
+A reusable workflow that's used to deploy files from GitHub to WPEngine.
 
-1. `backup`
-   - Uses WPEngine API to create a full environment backup (database, files, plugins)
-   - Needs API credentials and Account API Access enabled in the WPEngine profile (https://my.wpengine.com/profile/api_access)
-
-2. `deploy`
-   - Uses the official WPEngine action (`wpengine/github-action-wpe-site-deploy`) to deploy files via rsync
-   - Needs a private SSH key to connect to the server (https://my.wpengine.com/profile/ssh_keys)
-
-3. `send-notifications`
-   - Uses the official Slack action (`slackapi/slack-github-action`) to send messages to the Slack channel
-   - Needs Slack Webhook URL to be able to post in the Slack channel (https://github.com/slackapi/slack-github-action)
-
-For more info on inputs, secrets and setup of this workflow, see the full documentation in [`.github/workflows/wpengine/README.md`](.github/workflows/wpengine/README.md).
+For more info on inputs, secrets and setup of this workflow, see the full documentation in [Saritasa DevOps](https://devops.docs.saritasa.cloud/cicd/wordpress/wpengine/)

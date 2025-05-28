@@ -18,7 +18,7 @@ on:
         default: 15
         required: false
         type: number
-      exclude_flags:
+      rsync_extra_flags:
         description: Additional rsync exclude flags (can be multiple)
         default: --exclude=.*
         required: false
@@ -43,7 +43,7 @@ on:
         description: Password for API access to WPEngine
       wpengine_ssh_key:
         required: true
-        description: Private SSH key needed to connect to server
+        description: Private SSH key needed to connect to WPEngine server
 
 jobs:
   backup:
@@ -143,7 +143,7 @@ jobs:
           # --inplace - update files "inplace" without creating temporary copies
           # --delete - delete files in the dst that no longer exist in the src
           # --exclude=.* - exclude dotfiles and dotfolders
-          FLAGS: -azvr --inplace --delete ${{ inputs.exclude_flags }}
+          FLAGS: -azvr --inplace --delete ${{ inputs.rsync_extra_flags }}
 
   send-notifications:
     needs: deploy
@@ -174,7 +174,6 @@ jobs:
           echo "manage=$MANAGE" >> $GITHUB_OUTPUT
           
       - name: Notify about success
-        id: send-success-message
         if: needs.deploy.result == 'success'
         uses: slackapi/slack-github-action@v2.1.0
         with:
@@ -222,7 +221,6 @@ jobs:
             }
 
       - name: Notify about failure
-        id: send-failure-message
         if: needs.deploy.result != 'success'
         uses: slackapi/slack-github-action@v2.1.0
         with:
