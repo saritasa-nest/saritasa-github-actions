@@ -232,7 +232,7 @@ jobs:
               "attachments": [
                 {
                     "color": "a30200",
-                    "text": "The latest changes to ${{ steps.prepare.outputs.env }} failed to be deployed",
+                    "text": "The latest changes to ${{ steps.prepare.outputs.env }} failed to deploy",
                     "title": "${{ steps.prepare.outputs.commit }}",
                     "author_name": "${{ steps.prepare.outputs.author_name }}",
                     "author_link": "${{ steps.prepare.outputs.author_link }}",
