@@ -2,14 +2,14 @@
 [{{- file.name }}]({{ repoUrl }}/blob/{{ ref }}/{{ file.name }}#L{{ file.startLine }}-L{{ file.endLine }})
 {%- endmacro -%}
 
-# Summary of the vulnerabilities check  
+### Summary of the vulnerabilities check  
 
 {% if vulnerabilities %}
-**❗You have vulnerabilities in your code**
+#### **❗You have vulnerabilities in your code**
 
 {%- set repoUrl = "https://github.com/" + github.repo %}
 
-## vulnerabilities
+#### vulnerabilities
 
 {%- set vulnerabilitiesFiles = [] %}
 {%- for fileName, files in vulnerabilities.files.items() %}
@@ -24,5 +24,5 @@
 | {{ loop.index }} | {{ fileLink(file, github.pullRequestBranch) }} | {{ file.severity }} | {{ file.package }} | {{ file.installedVersion }} | {{ file.fixedVersion }} | {{ file.description }} |
 {%- endfor %}
 {% else %}
-✅ **Vulnerabilities checks passed successfully!**
+#### ✅ **Vulnerabilities checks passed successfully!**
 {% endif %}
