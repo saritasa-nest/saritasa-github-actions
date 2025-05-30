@@ -1,9 +1,13 @@
 # Workflows
+
 ## android
+
 ## asp.net
+
 ## ios
 
 ## wordpress
+
 ### ci-wordpress reusable workflow
 
 ### Deploying
@@ -23,7 +27,7 @@ During deployment, ansistrano looks at the current timestamp in runner by execut
 If everything has been set up properly, after completing the workflow approximately the following structure will be created on the server.
 Check how the on your server folder structure would look like after one, two and three deployments.
 
-```
+```bash
 -- /var/www/my-app.com
 |-- current -> /var/www/my-app.com/releases/20100509145325
 |-- releases
@@ -31,7 +35,7 @@ Check how the on your server folder structure would look like after one, two and
 |-- shared
 ```
 
-```
+```bash
 -- /var/www/my-app.com
 |-- current -> /var/www/my-app.com/releases/20100509150741
 |-- releases
@@ -40,7 +44,7 @@ Check how the on your server folder structure would look like after one, two and
 |-- shared
 ```
 
-```
+```bash
 -- /var/www/my-app.com
 |-- current -> /var/www/my-app.com/releases/20100512131539
 |-- releases
@@ -57,6 +61,7 @@ shared - This folder contains shareable files that we can re-used between releas
 ### Rolling back
 
 In order to rollback, you need to set up the deployment and run the rollback workflow. Workflow, will switch the current folder to the previous release.
+
 - Create a new workflow file for rollback, for example, [`rollback.yml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/.github/workflows/ci-rollback.yml)
 - Place the created playbook in your repository for example, [`ci\ansible\rollback.yaml`](https://github.com/saritasa-nest/ceai-wordpress/blob/develop/ci/ansible/ansistrano-deploy.yml)
 
@@ -64,7 +69,8 @@ Watch the [ru video](https://vimeo.com/manage/videos/869032751)
 Watch the [en video](https://vimeo.com/manage/videos/871687786)
 
 Before rollback
-```
+
+```bash
 -- /var/www/my-app.com
 |-- current -> /var/www/my-app.com/releases/20100512131539
 |-- releases
@@ -75,7 +81,8 @@ Before rollback
 ```
 
 After rollback
-```
+
+```bash
 -- /var/www/my-app.com
 |-- current -> /var/www/my-app.com/releases/20100509150741
 |-- releases
@@ -86,23 +93,23 @@ After rollback
 
 ### Inputs variables
 
-| Variable       | Type          | Example                  | Discription                                                                                                       |
-| ---------------|:-------------:| :------------------------|-------------------------------------------------------------------------------------------------------------------|
-| host           | string        | 59.128.16.24             | The address of the server for deploy                                                                              |
-| username       | string        | user                     | The linux OS username for connect to server via ssh                                                               |
-| environment    | string        | production               | The environment for deploy i.e development, staging, production                                                   |
-| playbook_path  | string        | ci/ansible/playbook.yaml | The path to the file relative to the repository from which the deployment is made, used in Ansistrano deploy task |
-| deploy_path    | string        | ~/deploy                 | The path to deploy on the remote server                                                                           |
-| deploy_repo    | string        | git@github.com:saritasa-nest/ceai-wordpress.git | The path to deploy on the remote server                                                    |
-| deploy_branch  | string        | develop                  | The branch from which the deployment is made                                                                      |
-| python_version | number        | 3.11.4 | Each python version supports a certain range of ansible versions, so we need to specify the current version of python in order to install the latest version of ansible. |
-| runner         | string        | saritasa-rocks-eks       | The runner on which workflow is running: ubuntu, macos, windows, etc                                              |
+| Variable       |  Type  | Example                                         | Description                                                                                                                                                              |
+| -------------- | :----: | :---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| host           | string | 59.128.16.24                                    | The address of the server for deploy                                                                                                                                     |
+| username       | string | user                                            | The linux OS username for connect to server via ssh                                                                                                                      |
+| environment    | string | production                                      | The environment for deploy i.e development, staging, production                                                                                                          |
+| playbook_path  | string | ci/ansible/playbook.yaml                        | The path to the file relative to the repository from which the deployment is made, used in Ansistrano deploy task                                                        |
+| deploy_path    | string | ~/deploy                                        | The path to deploy on the remote server                                                                                                                                  |
+| deploy_repo    | string | git@github.com:saritasa-nest/ceai-wordpress.git | The path to deploy on the remote server                                                                                                                                  |
+| deploy_branch  | string | develop                                         | The branch from which the deployment is made                                                                                                                             |
+| python_version | number | 3.11.4                                          | Each python version supports a certain range of ansible versions, so we need to specify the current version of python in order to install the latest version of ansible. |
+| runner         | string | saritasa-rocks-eks                              | The runner on which workflow is running: ubuntu, macos, windows, etc                                                                                                     |
 
 ### Inputs secrets
 
-| Variable        | Discription                                                    |
-| ----------------|:---------------------------------------------------------------|
-| ssh_private_key | The private key for connect to server via ssh                  |
+| Variable        | Description                                   |
+| --------------- | :-------------------------------------------- |
+| ssh_private_key | The private key for connect to server via ssh |
 
 ### Examples
 
@@ -115,7 +122,7 @@ This implementation is used in the [CEAI-Wordpress project](https://github.com/s
 
 `ci-prod.yml`
 
-```bash
+```yaml
 name: Deploy to Bluehost
 on:
   workflow_dispatch:
@@ -136,14 +143,13 @@ jobs:
 
     secrets:
       ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-
 ```
 
 ### Ansistrano deploy playbook
 
 `ansistrano-deploy.yml`
 
-```bash
+```yaml
 ---
 - name: deployment
   hosts: all
@@ -164,6 +170,7 @@ jobs:
   roles:
       - { role: ansistrano.deploy }
 ```
+
 `ansistrano_keep_releases` number of stored releases default 3
 
 `ansistrano_deploy_from` where my local project is (relative or absolute path)
@@ -191,7 +198,7 @@ Watch the [en video](https://vimeo.com/manage/videos/871687786)
 
 `ci-rollback.yml`
 
-```bash
+```yaml
 name: Rollback to Previously release
 on:
   workflow_dispatch:
@@ -216,7 +223,7 @@ jobs:
 
 `ansistrano-rollback.yml`
 
-```bash
+```yaml
 ---
 - name: rollback
   hosts: all
@@ -226,7 +233,7 @@ jobs:
       - { role: ansistrano.rollback }
 ```
 
-More information for adnsistrano playbook in official [docs](https://github.com/ansistrano/deploy/blob/master/README.md)
+More information for ansistrano playbook in official [docs](https://github.com/ansistrano/deploy/blob/master/README.md)
 
 ### Synchronization of client changes
 
@@ -242,3 +249,9 @@ git add . && \
 git commit -m 'Commit message' && \
 git push
 ```
+
+## WPEngine reusable workflow
+
+A reusable workflow that's used to deploy files from GitHub to WPEngine.
+
+For more info on inputs, secrets and setup of this workflow, see the full documentation in [Saritasa DevOps](https://devops.docs.saritasa.cloud/cicd/wordpress/wpengine/)
