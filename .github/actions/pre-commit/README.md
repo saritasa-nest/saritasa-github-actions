@@ -38,7 +38,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run pre-commit checks
-        uses: saritasa-nest/saritasa-github-actions/.github/actions/pre-commit@v3.4
+        uses: saritasa-nest/saritasa-github-actions/.github/actions/pre-commit@v3.8
         with:
           ignore-commit-authors: autocommit-bot
           node-version: '20'
