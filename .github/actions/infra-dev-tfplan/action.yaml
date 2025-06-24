@@ -1,0 +1,88 @@
+name: infra-dev-tfplan
+description: Generates Terraform plan for pull requests in infra-dev repositories
+
+inputs:
+  username:
+    description: GitHub username to use for deploying terraform-pod
+    required: false
+    default: github-actions[bot]
+  email:
+    description: GitHub email to use for deploying terraform-pod
+    required: false
+    default: 41898282+github-actions[bot]@users.noreply.github.com
+
+runs:
+  using: composite
+  steps:
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v4
+    - name: Set up helm
+      uses: azure/setup-helm@v4
+    - name: Set up ansifilter
+      shell: bash
+      run: |
+        # TODO: add to the custom runner image (?)
+        sudo apt-get update
+        sudo apt-get install --assume-yes ansifilter
+    - name: Check out repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.ref }}
+    - name: Add helm repo
+      shell: bash
+      run: |
+        helm repo add saritasa https://saritasa-nest.github.io/saritasa-devops-helm-charts/
+    - name: Deploy terraform-pod
+      id: deploy
+      shell: bash
+      run: |
+        client="$(ls -1 *.tfvars | cut -d '.' -f 1)"
+        helm upgrade --install "${client}-dev" saritasa/terraform-pod \
+          --version 0.0.38-dev.2 \
+          --namespace terraform \
+          --set terraform.client="${client}" \
+          --set image.tag="$(cat .terraform-version)" \
+          --set image.pullPolicy="Always" \
+          --set github.repository="${{ github.repository }}" \
+          --set github.branch="${{ github.event.pull_request.head.ref }}" \
+          --set github.username="${{ inputs.username }}" \
+          --set github.email="${{ inputs.email }}" \
+          --wait
+        pod="$(kubectl get pods -n terraform \
+                 -l app.kubernetes.io/name=terraform-pod \
+                 -l app.kubernetes.io/instance="${client}-dev" \
+                 -o=jsonpath='{.items[0].metadata.name}')"
+        echo "pod=${pod}" >> "${GITHUB_OUTPUT}"
+    - name: Generate Terraform plan
+      shell: bash
+      run: |
+        kubectl exec -n terraform ${{ steps.deploy.outputs.pod }} -c terraform -- \
+          make _dev plan ARGS='-input=false -out=tfplan'
+    - name: Render Terraform plan
+      shell: bash
+      run: |
+        {
+          echo '<!-- TFPLAN_AUTOMATION -->'
+          echo '<details>'
+          echo '<summary>Generated Terraform plan</summary>'
+          echo -e '\n```hcl'
+          kubectl exec -n terraform ${{ steps.deploy.outputs.pod }} -c terraform -- \
+            make _dev show ARGS='tfplan' | ansifilter
+          echo -e '\n```'
+          echo '</details>'
+        } > tfplan.md
+    - name: Find PR comment
+      uses: peter-evans/find-comment@v3
+      id: find-comment
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: github-actions[bot]
+        body-includes: <!-- TFPLAN_AUTOMATION -->
+    - name: Create or update PR comment
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-id: ${{ steps.find-comment.outputs.comment-id }}
+        edit-mode: replace
+        body-path: tfplan.md
