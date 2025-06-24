@@ -39,7 +39,7 @@ runs:
       run: |
         client="$(ls -1 *.tfvars | cut -d '.' -f 1)"
         helm upgrade --install "${client}-dev" saritasa/terraform-pod \
-          --version 0.0.38-dev.2 \
+          --version 0.0.38-dev.3 \
           --namespace terraform \
           --set terraform.client="${client}" \
           --set image.tag="$(cat .terraform-version)" \
