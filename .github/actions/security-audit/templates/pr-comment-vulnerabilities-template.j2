@@ -18,10 +18,10 @@
   {%- endfor %}
 {%- endfor %}
 
-|| File | Severity | Package | Installed Version | Fixed Version | Description |
-|---|---|---|---|---|---|---|
+|| File | Severity | ID | Package | Installed Version | Fixed Version | Description |
+|---|---|---|---|---|---|---|---|
 {%- for file in vulnerabilitiesFiles %}
-| {{ loop.index }} | {{ fileLink(file, github.pullRequestBranch) }} | {{ file.severity }} | {{ file.package }} | {{ file.installedVersion }} | {{ file.fixedVersion }} | {{ file.description }} |
+| {{ loop.index }} | {{ fileLink(file, github.pullRequestBranch) }} | {{ file.severity }} | {{ file.ruleId }} | {{ file.package }} | {{ file.installedVersion }} | {{ file.fixedVersion }} | {{ file.description }} |
 {%- endfor %}
 {% else %}
 #### ✅ **Vulnerabilities checks passed successfully!**
