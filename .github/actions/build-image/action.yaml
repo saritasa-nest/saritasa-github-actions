@@ -1,0 +1,177 @@
+---
+name: build-image
+description: |
+  The action is launched in the PRs opened by the Renovate bot
+  when one or more of the tags `build:dev`, `build:staging`, `build:prod` are added,
+  and does the following:
+    - export environment variables from required files
+    - extract tag by image digest specified in Dockerfile
+    - build and publish image with received tag and `latest` tag
+    - create a json file with variables for the jinja template and upload it as an artifact
+    - send a notification to slack channel
+
+inputs:
+  context:
+    description: folder with files required to build docker image
+    required: true
+  dockerhub_token:
+    description: token for read-only access to dockerhub
+    required: false
+    default: ''
+  dockerhub_username:
+    description: username for read-only access to dockerhub
+    required: false
+    default: ''
+  environment:
+    description: |
+      the environment for which the image will be built:
+      `dev`, `prod`, `staging`
+    required: true
+  slack_webhook_url:
+    description: |
+      CI slack channel webhook url for sending build notifications
+      https://api.slack.com/apps/A01LM626QTZ/incoming-webhooks
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Combine all .env files into .env.common file
+      id: env-files
+      uses: ftnext/action-concatenate-files@v1.0.1
+      with:
+        sources: |
+          .env
+          .env.${{ inputs.environment }}
+          ${{ inputs.context }}/.env
+          ${{ inputs.context }}/.env.${{ inputs.environment }}
+        destination: .env.common
+    - name: Export environment variables from .env.common file
+      id: env-common
+      uses: c-py/action-dotenv-to-setenv@v5
+      with:
+        env-file: .env.common
+    - name: Configure AWS credentials
+      id: aws-credentials
+      uses: aws-actions/configure-aws-credentials@v4.3.1
+      with:
+        aws-region: ${{ env.aws_region }}
+        role-to-assume: ${{ env.aws_gha_role }}
+    - name: Login to AWS ECR
+      id: ecr
+      uses: aws-actions/amazon-ecr-login@v2.0.1
+    - name: Find the tag for a given image digest
+      id: tag
+      shell: bash
+      run: |
+        target_digest=$(grep '^ARG IMAGE_SHA=' ${{ inputs.context }}/Dockerfile | cut -d= -f2)
+        echo "Image digest: ${target_digest}"
+
+        # get dockerhub authorization token
+        # if the dockerhub username and password isn't passed, then we get the following response:
+        # {"detail":"Incorrect authentication credentials"}
+        # and in that case it's replaced with an empty value
+        token=$(curl -X POST \
+          -s -H "Content-Type: application/json" \
+          -d "{\"username\": \"${{ inputs.dockerhub_username }}\", \"password\": \"${{ inputs.dockerhub_token }}\"}" \
+          https://hub.docker.com/v2/users/login/ | jq -r '.token // empty')
+
+        # find a tag whose digest matches the given one and which is not called 'latest'
+        page=1
+        block_size=50
+        url="https://registry.hub.docker.com/v2/repositories/${docker_repository}/tags"
+        total_tags=$(curl -s ${url} | jq -r '.count')
+        while [[ -z ${tag} && ${page} -le ${total_tags} ]]; do
+          # the authorization token is added to the request if it has a non-empty value
+          tag=$(curl \
+            -s ${token:+-H "Authorization: JWT ${token}"} \
+            "${url}?page_size=${block_size}&page=${page}" \
+            | jq -r --arg digest "${target_digest}" \
+            '.results // [] | .[] | select(.digest == $digest and .name != "latest") | .name')
+          ((page+=1))
+        done
+        if [ -z ${tag} ]; then
+          echo "❗️Tag for digest ${target_digest} not found"
+          exit 1
+        fi
+        echo "✅ Matching tag found: ${tag}"
+        echo "image_tag=$tag" >> $GITHUB_OUTPUT
+    - name: Build and push docker image
+      id: build-image
+      uses: docker/build-push-action@v6.18.0
+      with:
+        context: ${{ inputs.context }}
+        platforms: ${{ env.platforms }}
+        push: true
+        tags: ${{ env.ecr_repository_uri }}:${{ steps.tag.outputs.image_tag }}, ${{ env.ecr_repository_uri }}:latest
+    - name: Configure settings for slack message and PR comment
+      id: data
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: |
+        if ${{ contains(steps.*.outcome, 'failure') }}; then
+          echo "color=cc0000" >> $GITHUB_OUTPUT
+          echo "message=😞 The build of *${{ inputs.context }}* image failed." >> $GITHUB_OUTPUT
+        else
+          echo "color=28a745" >> $GITHUB_OUTPUT
+          echo "message=The build of *${{ inputs.context }}* image with version *${{ steps.tag.outputs.image_tag }}* was successful! :rocket:" >> $GITHUB_OUTPUT
+        fi
+
+        # create json file name with variables for pr comment using context name
+        # `buildpacks/backend/builder` --> `buildpacks-backend-builder`
+        artifact="${{ inputs.context }}"
+        artifact="${artifact//\//-}-${{ inputs.environment }}"
+        echo "artifact=${artifact}" >> $GITHUB_OUTPUT
+        # create a file with variables for the pr comment template
+        # example:
+        # {
+        #   aws_account: XXXXXXXXXXXX,
+        #   aws_region: us-east-1,
+        #   images: [{
+        #     ecr_repo: project/prod/backend/buildpacks/builder,
+        #     digest: sha256:1244e81fbe4bec9f97ac81483022d63386a8ad4abb461b5e307cc0c9718847dd
+        #   }]
+        # }
+        jq -n \
+          --arg aws_account "${{ env.aws_account }}" \
+          --arg aws_region "${{ env.aws_region }}" \
+          --arg ecr_repo "${{ env.ecr_repository_name }}" \
+          --arg digest "${{ steps.build-image.outputs.digest }}" \
+            '{
+              images: [{
+                aws_account: $aws_account,
+                aws_region: $aws_region,
+                ecr_repo: $ecr_repo,
+                digest: $digest
+              }]
+            }' > ${artifact}.json
+    - name: Upload pr-comment-data.json as artifact
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.data.outputs.artifact }}
+        path: ${{ steps.data.outputs.artifact }}.json
+    - name: Send notification to slack
+      if: ${{ !cancelled() }}
+      uses: slackapi/slack-github-action@v2.1.1
+      with:
+        webhook: ${{ inputs.slack_webhook_url }}
+        webhook-type: incoming-webhook
+        payload: |-
+          attachments:
+            - color: "${{ steps.data.outputs.color }}"
+              author_name: ${{ github.actor }}
+              author_link: https://github.com/${{ github.actor }}
+              author_icon: https://github.com/${{ github.actor }}.png
+              fields:
+                - short: false
+                  value: "${{ steps.data.outputs.message }}"
+                - title: Environment
+                  short: true
+                  value: ${{ inputs.environment }}
+                - title: Pull request
+                  short: true
+                  value: <https://github.com/${{ github.repository }}/pull/${{ github.event.number }}|#${{ github.event.number }}>
+                - title: Action URL
+                  short: true
+                  value: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.job }}>
