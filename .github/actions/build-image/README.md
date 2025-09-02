@@ -68,16 +68,18 @@ The reusable workflow composes the following jobs:
 - `prepare-input-data`
   - checks changed Dockerfiles in the PR
   - reads PR labels `build:*` to prepare a build matrix that looks like this:
-    ```json
-    {
-      "include": [
-        {"environment": "dev", "context": "buildpacks/backend/builder"},
-        {"environment": "dev", "context": "buildpacks/backend/runner"},
-        {"environment": "prod", "context": "buildpacks/backend/builder"},
-        {"environment": "prod", "context": "buildpacks/backend/runner"}
-      ]
-    }
-    ```
+
+```json
+{
+  "include": [
+    {"environment": "dev", "context": "buildpacks/backend/builder"},
+    {"environment": "dev", "context": "buildpacks/backend/runner"},
+    {"environment": "prod", "context": "buildpacks/backend/builder"},
+    {"environment": "prod", "context": "buildpacks/backend/runner"}
+  ]
+}
+```
+
 - `build-images`
   - for each matrix entry, calls the composite action to build and push the Docker image
 - `create-pr-comment`
