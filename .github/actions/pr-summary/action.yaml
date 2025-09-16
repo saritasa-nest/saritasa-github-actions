@@ -72,7 +72,7 @@ runs:
         OPENAI_PROMPT: ${{ inputs.openai-prompt }}
       run: |
         set -euo pipefail
-        python .github/actions/pr-summary/pr-summary-generator.py \
+        python ${{github.action_path}}/pr-summary-generator.py \
           --jira-url "${{inputs.jira-url}}" \
           --model "${{inputs.openai-model}}" \
           --output summary.md \
