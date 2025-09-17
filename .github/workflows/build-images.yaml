@@ -46,6 +46,7 @@ jobs:
       - name: Extract environments from labels and prepare matrix values
         id: data
         run: |
+          set -euo pipefail
           # extract environments from pr labels
           # the result will be an array like "dev prod"
           environments=$(jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" | grep '^build:' | sed 's/^build://')
@@ -75,6 +76,7 @@ jobs:
           done
           echo "matrix=$(echo ${matrix} | jq -c .)"
           echo "matrix=$(echo ${matrix} | jq -c .)" >> $GITHUB_OUTPUT
+
   build-images:
     runs-on: ${{ inputs.runner }}
     if: ${{ needs.prepare-input-data.outputs.matrix != '[]' }}
@@ -94,6 +96,7 @@ jobs:
           dockerhub_username: ${{ secrets.dockerhub_username }}
           environment: ${{ matrix.environment }}
           slack_webhook_url: ${{ secrets.slack_webhook_url }}
+
   create-pr-comment:
     runs-on: ${{ inputs.runner }}
     if: ${{ !cancelled() && needs.build-images.result != 'skipped' }}
@@ -111,6 +114,7 @@ jobs:
           pattern: '!*.dockerbuild'
       - name: Create common file with vars for the jinja template
         run: |
+          set -euo pipefail
           jq -s \
             --arg author "${{ github.event.sender.login }}" \
             --arg link "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
@@ -136,6 +140,7 @@ jobs:
           comment-author: github-actions[bot]
           body-path: pr-comment.md
           edit-mode: append
+
   add-auto-merge-label:
     runs-on: ${{ inputs.runner }}
     if: ${{ !cancelled() && needs.build-images.result == 'success' }}
