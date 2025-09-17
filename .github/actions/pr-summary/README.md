@@ -44,7 +44,7 @@ permissions:
 jobs:
   auto-generate-summary:
     runs-on: saritasa-rocks-eks
-    # Summary will not be generated if the PR was opened as a draft
+    # Summary will not be generated if the PR was opened as a draft.
     if: |
       github.event.pull_request.draft == false
     steps:
@@ -58,6 +58,8 @@ jobs:
         uses: saritasa-nest/saritasa-github-actions/.github/actions/pr-summary@v4.3
         with:
           github-token: ${{secrets.github_token}}
+          # OpenAI API key is stored at organization level.
+          # https://keys.saritasa.cloud/cred/detail/Yfe98Px2yLH3tCjLYvPAHb/
           openai-api-key: ${{secrets.openai_api_key}}
           pr-number: ${{github.event.pull_request.number}}
 ```
