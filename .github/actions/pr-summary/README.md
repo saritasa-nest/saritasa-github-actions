@@ -19,6 +19,10 @@ A GitHub Action that automatically generates and updates pull request descriptio
 | `openai-model`   | No       | `gpt-5`                          | OpenAI model to use for summary generation     |
 | `openai-prompt`  | No       | [See below](#prompt-example)     | Custom prompt template for OpenAI              |
 
+## OpenAI API Key
+
+The OpenAI API key is stored at the organization level and is available to all private repositories. You can access the token value here: https://keys.saritasa.cloud/cred/detail/Yfe98Px2yLH3tCjLYvPAHb/
+
 ## Usage
 
 ### Basic Example
