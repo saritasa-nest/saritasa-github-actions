@@ -1,0 +1,91 @@
+---
+name: pr-summary
+description: |
+  GitHub Action for automatic generation of pull request summaries using OpenAI.
+  Key features:
+  - Analyzes PR changes using AI
+  - Automatically links to JIRA issues from commit messages
+  - Generates structured Markdown with change analysis
+  - Updates PR description with the generated summary
+  The action processes all changes in the PR, analyzes them with OpenAI,
+  and updates the PR description with a clean, readable summary.
+
+inputs:
+  github-token:
+    description: GitHub token
+    required: true
+  jira-url:
+    description: base url for Jira
+    required: false
+    default: https://saritasa.atlassian.net
+  openai-api-key:
+    description: openai api key for PR summary generation
+    required: true
+  openai-model:
+    description: openai model to use for PR summary generation
+    required: false
+    default: gpt-5
+  openai-prompt:
+    description: The prompt template to use for OpenAI
+    required: false
+    default: >-
+      Summarize the following code changes as if explaining to a teammate what is new and why it matters.
+      - Focus only on files with meaningful or functional changes; skip trivial or empty files.
+      - Limit description to one sentence per file.
+      - Use bullet points starting with '-' and a space.
+      - Combine related changes into one bullet if they belong to the same feature or goal.
+      - Vary your wording; avoid repeating "Added/Created" for each bullet.
+      - Documentation files changed: {doc_files}. For documentation files, provide a brief summary like "Updated documentation for [feature]" without detailed code diff analysis.
+
+      Changed files:
+      {all_files}
+
+      Code changes:
+      {code_changes}
+
+      Your response (start with bullet points immediately):
+  pr-number:
+    description: PR number to update with the generated summary
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install openai-agents uv PyGithub
+
+    - name: Generate PR summary
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{inputs.github-token}}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        REPO_PATH: ${{github.workspace}}
+        REPOSITORY: ${{github.repository}}
+        OPENAI_PROMPT: ${{ inputs.openai-prompt }}
+      run: |
+        set -euo pipefail
+        python ${{github.action_path}}/pr-summary-generator.py \
+          --jira-url "${{inputs.jira-url}}" \
+          --model "${{inputs.openai-model}}" \
+          --output summary.md \
+          --pr-number "${{inputs.pr-number}}"
+
+    - name: Update PR Description
+      uses: nefrob/pr-description@v1.2.0
+      with:
+        content: summary.md
+        contentIsFilePath: true
+        # Completely replaces the entire PR description with summary.md content
+        # .* means "select everything" in the current description
+        regex: .*
+        # The 's' flag makes sure we replace the entire description, even if it has multiple lines
+        regexFlags: s
+        token: ${{inputs.github-token}}

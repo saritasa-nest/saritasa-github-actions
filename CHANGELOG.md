@@ -1,5 +1,12 @@
 # Changelog
 
+## 2025-09-16
+
+[v4.3]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/28)
+- Added `pr-summary` action
+
 ## 2025-03-14
 
 [v3.4]
