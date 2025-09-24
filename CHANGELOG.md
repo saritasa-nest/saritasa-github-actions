@@ -2,10 +2,17 @@
 
 ## 2025-09-02
 
-[v4.3]
+[v4.4]
 
 - [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/27)
 - Added `build-images` workflow
+
+## 2025-09-16
+
+[v4.3]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/28)
+- Added `pr-summary` action
 
 ## 2025-03-14
 
