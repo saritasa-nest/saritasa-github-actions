@@ -1,0 +1,18 @@
+{%- macro status_icon(status) -%}
+{%- if status == 'success' -%}
+✅
+{%- else -%}
+❌
+{%- endif -%}
+{%- endmacro -%}
+
+### {{ status_icon(status) }} build-images workflow status: {{ status }}
+Author: @{{ author }}
+{%- if status == 'success' %}
+Created images:
+{%- for image in images %}
+▶ [`{{ image.ecr_repo }}`](https://{{ image.aws_region }}.console.aws.amazon.com/ecr/repositories/private/{{ image.aws_account }}/{{ image.ecr_repo }}/_/image/{{ image.digest }}/details)
+{%- endfor %}
+{%- endif %}
+
+[Workflow run link]({{ link }})
