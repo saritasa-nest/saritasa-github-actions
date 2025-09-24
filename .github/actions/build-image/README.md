@@ -185,7 +185,7 @@ jobs:
     if: |
       github.event.pull_request.user.login == 'saritasa-renovatebot[bot]' &&
       github.event.label.name == 'build-images'
-    uses: saritasa-nest/saritasa-github-actions/.github/workflows/build-images.yaml@v4.3
+    uses: saritasa-nest/saritasa-github-actions/.github/workflows/build-images.yaml@v4.5
     with:
       runner: saritasa-rocks-eks
     secrets:

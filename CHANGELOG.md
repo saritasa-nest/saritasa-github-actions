@@ -1,5 +1,12 @@
 # Changelog
 
+## 2025-09-29
+
+[v4.5]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/29)
+- Fixed extraction of PR comment template for `build-images` workflow
+
 ## 2025-09-02
 
 [v4.4]
