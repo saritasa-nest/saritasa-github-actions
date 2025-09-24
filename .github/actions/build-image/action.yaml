@@ -62,6 +62,10 @@ runs:
     - name: Login to AWS ECR
       id: ecr
       uses: aws-actions/amazon-ecr-login@v2.0.1
+      with:
+        registry-type: ${{ env.ECR_TYPE }}
+      env:
+        ECR_TYPE: ${{ startsWith(env.ecr_repository_uri, 'public.ecr.aws') && 'public' || 'private' }}
     - name: Get DockerHub API token
       id: dockerhub-token
       shell: bash
