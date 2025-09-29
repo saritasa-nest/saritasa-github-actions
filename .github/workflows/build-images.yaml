@@ -88,7 +88,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Build and publish backend buildpack builder image
-        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@v4.4
+        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@v4.5
         with:
           context: ${{ matrix.context }}
           dockerhub_token: ${{ secrets.dockerhub_token }}
@@ -105,6 +105,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+      - name: Checkout pr comment template
+        uses: actions/checkout@v5
+        with:
+          repository: saritasa-nest/saritasa-github-actions
+          sparse-checkout: .github/actions/build-image/pr-comment-template.j2
+          path: pr-comment-template
+          sparse-checkout-cone-mode: false
       - name: Download data artifacts data for the PR comment template
         uses: actions/download-artifact@v5
         with:
@@ -129,7 +136,7 @@ jobs:
         uses: cuchi/jinja2-action@v1.3.0
         with:
           data_file: pr-comment-data.json
-          template: .github/actions/build-image/pr-comment-template.j2
+          template: pr-comment-template/.github/actions/build-image/pr-comment-template.j2
           output_file: pr-comment.md
       - name: Create or update a PR comment with docker build results
         uses: edumserrano/find-create-or-update-comment@v3
