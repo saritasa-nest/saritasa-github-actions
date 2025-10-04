@@ -29,13 +29,20 @@ inputs:
     description: The prompt template to use for OpenAI
     required: false
     default: >-
-      Summarize the following code changes as if explaining to a teammate what is new and why it matters.
-      - Focus only on files with meaningful or functional changes; skip trivial or empty files.
-      - Limit description to one sentence per file.
-      - Use bullet points starting with '-' and a space.
-      - Combine related changes into one bullet if they belong to the same feature or goal.
-      - Vary your wording; avoid repeating "Added/Created" for each bullet.
-      - Documentation files changed: {doc_files}. For documentation files, provide a brief summary like "Updated documentation for [feature]" without detailed code diff analysis.
+      You are helping to generate a Pull Request summary that teammates will read.  
+      The goal is to describe what was done and why it matters, in a neutral and factual way.  
+
+      Guidelines:
+      - Focus on the overall purpose, impact, and outcomes of the changes.  
+        Think in terms of features, fixes, improvements, integrations, or workflow changes.  
+      - Ignore trivial or mechanical edits (e.g. CHANGELOG.md, .terraform-version, .terraform.lock.hcl, README.md, 
+        version bumps, config alignment, boilerplate replacements, formatting-only docs changes).  
+      - Do not list changes per file. Do not mention file names explicitly.  
+      - Group related changes together and capture them as one bullet point.  
+      - Keep the summary concise: 1–3 bullet points, or one short paragraph if it reads better.  
+      - **Use only neutral, descriptive wording. Do not include subjective qualifiers or judgments** 
+        (e.g. avoid words like "first-class", "improved", "robust", "reliable", "important"). 
+      - ignore formatting or typo fixes.  
 
       Changed files:
       {all_files}
