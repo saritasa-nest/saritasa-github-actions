@@ -43,6 +43,7 @@ jobs:
         with:
           files: |
             **/Dockerfile
+            **/*.Dockerfile
       - name: Extract environments from labels and prepare matrix values
         id: data
         run: |
@@ -66,12 +67,14 @@ jobs:
           for env in ${environments[@]}; do
             for file in ${modified_files[@]}; do
               context=$(dirname "${file}")
+              dockerfile=$(basename "${file}")
               # add a new element to the matrix with the received relative path to the Dockerfile
               # for each environment
               matrix=$(echo "${matrix}" | jq \
                 --arg context "${context}" \
                 --arg env "${env}" \
-                '.include += [{"environment": $env, "context": $context}]')
+                --arg dockerfile "${dockerfile}" \
+                '.include += [{"environment": $env, "context": $context, "dockerfile": $dockerfile}]')
             done
           done
           echo "matrix=$(echo ${matrix} | jq -c .)"
@@ -88,9 +91,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Build and publish backend buildpack builder image
-        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@v4.5
+        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@feature/update-build-image
         with:
           context: ${{ matrix.context }}
+          dockerfile: ${{ matrix.dockerfile }}
           dockerhub_token: ${{ secrets.dockerhub_token }}
           dockerhub_username: ${{ secrets.dockerhub_username }}
           environment: ${{ matrix.environment }}
