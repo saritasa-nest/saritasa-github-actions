@@ -42,7 +42,7 @@ inputs:
       - Keep the summary concise: 1–3 bullet points, or one short paragraph if it reads better.  
       - **Use only neutral, descriptive wording. Do not include subjective qualifiers or judgments** 
         (e.g. avoid words like "first-class", "improved", "robust", "reliable", "important"). 
-      - ignore formatting or typo fixes.  
+      - Ignore formatting or typo fixes.  
 
       Changed files:
       {all_files}
