@@ -56,10 +56,10 @@ jobs:
           # which looks like this:
           # {
           #   "include": [
-          #     {"environment": "dev", "context": "buildpacks/backend/builder"},
-          #     {"environment": "dev", "context": "buildpacks/backend/runner"},
-          #     {"environment": "prod", "context": "buildpacks/backend/builder"},
-          #     {"environment": "prod", "context": "buildpacks/backend/runner"}
+          #     {"environment": "dev", "context": "buildpacks/backend/builder", "dockerfile": "Dockerfile"},
+          #     {"environment": "dev", "context": "buildpacks/backend/runner", "dockerfile": "Dockerfile"},
+          #     {"environment": "prod", "context": "buildpacks/backend/builder", "dockerfile": "Dockerfile"},
+          #     {"environment": "prod", "context": "buildpacks/backend/runner", "dockerfile": "Dockerfile"}
           #   ]
           # }
           matrix='{"include":[]}'

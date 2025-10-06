@@ -24,7 +24,7 @@ When invoked for a particular build context and environment, the action performs
 
 4) Log in to AWS ECR.
 
-5) Determine the image tag to use by reading `ARG IMAGE_SHA=...` from `<context>/Dockerfile` and finding the matching tag in Docker Hub for the repo specified by `docker_repository` (optionally authenticated to avoid rate limits).
+5) Determine the image tag to use by reading `ARG IMAGE_SHA=...` from `<context>/<dockerfile>` and finding the matching tag in Docker Hub for the repo specified by `docker_repository` (optionally authenticated to avoid rate limits).
 
 6) Build and push the Docker image to ECR with two tags: the discovered tag and `latest`.
 
@@ -35,6 +35,7 @@ When invoked for a particular build context and environment, the action performs
 #### Inputs
 
 - `context` (required): Relative path to the folder that contains the `Dockerfile` and build context.
+- `dockerfile` (required): Name of the Dockerfile to build.
 - `environment` (required): One of `dev`, `staging`, `prod`.
 - `slack_webhook_url` (required): Slack Incoming Webhook URL to post build status.
 - `dockerhub_username` (optional): Docker Hub username for read-only auth (reduces rate limits when querying tags).
@@ -52,7 +53,7 @@ When invoked for a particular build context and environment, the action performs
 
 #### Dockerfile requirement
 
-Your `<context>/Dockerfile` must contain a line with the base image digest:
+Your `<context>/<dockerfile>` must contain a line with the base image digest:
 
 ```Dockerfile
 ARG IMAGE_SHA=sha256:...
@@ -144,9 +145,9 @@ Example configuration for updating buildpack Docker images:
 # │ To start the workflow, add the `build-images` label to the pull request.                                                                             │
 # │ The workflow extracts environments for which images need to be built from the labels `build:dev`, `build:staging`, `build:prod`.                     │
 # │ Then the workflow checks which images' Dockerfiles were changed and builds and publishes them.                                                       │
-# │ The workflow needs the following environment variables:                                                                                               │
-# │ - `aws_account` - AWS account ID for the current environment                                                                                          │
-# │ - `aws_gha_role` - role for access to AWS using the GitHub OIDC provider                                                                              │
+# │ The workflow needs the following environment variables:                                                                                              │
+# │ - `aws_account` - AWS account ID for the current environment                                                                                         │
+# │ - `aws_gha_role` - role for access to AWS using the GitHub OIDC provider                                                                             │
 # │ - `aws_region` - the region in which the ECR for the custom image is located                                                                         │
 # │ - `client` - project name                                                                                                                            │
 # │ - `docker_repository` - the base image used in the Dockerfile on which the custom image is based                                                     │
@@ -159,7 +160,7 @@ Example configuration for updating buildpack Docker images:
 # │ - <context>.env                                                                                                                                      │
 # │ - <context>.env.<environment>                                                                                                                        │
 # │                                                                                                                                                      │
-# │ A separate job is launched for each image. It builds the image, publishes it to AWS ECR, and sends a notification                                     │
+# │ A separate job is launched for each image. It builds the image, publishes it to AWS ECR, and sends a notification                                    │
 # │ to the Slack channel `project-<client>-docker-images`. After all builds are completed, a comment is created in the pull request.                     │
 # │ If the build is successful, the workflow will add an `auto-merge` label allowing automatic PR merge, and the PR will be merged by Mergeable.         │
 # │                                                                                                                                                      │
