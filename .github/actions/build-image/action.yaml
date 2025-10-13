@@ -189,7 +189,7 @@ runs:
         set -euo pipefail
         if ${{ contains(steps.*.outcome, 'failure') }}; then
           echo "color=cc0000" >> $GITHUB_OUTPUT
-          echo "message=😞 The build of *${{ inputs.context }}* image failed." >> $GITHUB_OUTPUT
+          echo "message=😞 The build of *${{ inputs.context }}* image with version *${{ steps.tag.outputs.image_tag }}* failed." >> $GITHUB_OUTPUT
         else
           echo "color=28a745" >> $GITHUB_OUTPUT
           echo "message=The build of *${{ inputs.context }}* image with version *${{ steps.tag.outputs.image_tag }}* was successful! :rocket:" >> $GITHUB_OUTPUT
