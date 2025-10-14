@@ -14,6 +14,9 @@ inputs:
   context:
     description: folder with files required to build docker image
     required: true
+  dockerfile:
+    description: dockerfile name
+    required: true
   dockerhub_registry_url:
     description: dockerhub api registry url
     required: false
@@ -59,9 +62,18 @@ runs:
       with:
         aws-region: ${{ env.aws_region }}
         role-to-assume: ${{ env.aws_gha_role }}
+    - name: Detect ECR type
+      shell: bash
+      run: |
+        echo "ECR_TYPE=private" >> $GITHUB_ENV
+        if [[ "${{ env.ecr_repository_uri }}" == public.ecr.aws* ]]; then
+          echo "ECR_TYPE=public" >> $GITHUB_ENV
+        fi
     - name: Login to AWS ECR
       id: ecr
       uses: aws-actions/amazon-ecr-login@v2.0.1
+      with:
+        registry-type: ${{ env.ECR_TYPE }}
     - name: Get DockerHub API token
       id: dockerhub-token
       shell: bash
@@ -81,7 +93,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        target_digest=$(grep '^ARG IMAGE_SHA=' ${{ inputs.context }}/Dockerfile | cut -d= -f2)
+        target_digest=$(grep '^ARG IMAGE_SHA=' ${{ inputs.context }}/${{ inputs.dockerfile }} | cut -d= -f2)
         echo "Image digest: ${target_digest}"
 
         # find a tag whose digest matches the given one and which is not called 'latest'
@@ -105,14 +117,30 @@ runs:
         fi
         echo "✅ Matching tag found: ${tag}"
         echo "image_tag=$tag" >> $GITHUB_OUTPUT
+    - name: Determine Dockerfile suffix
+      id: dockerfile-suffix
+      shell: bash
+      run: |
+        filename="${{ inputs.dockerfile }}"
+        # runner-jammy.Dockerfile → jammy
+        base=$(basename "$filename" .Dockerfile)
+        if [[ "$base" == *"-"* ]]; then
+          suffix="-${base#*-}"
+        else
+          suffix=""
+        fi
+        echo "suffix=$suffix" >> $GITHUB_OUTPUT
     - name: Build and push docker image
       id: build-image
       uses: docker/build-push-action@v6.18.0
       with:
         context: ${{ inputs.context }}
+        file: ${{ inputs.context }}/${{ inputs.dockerfile }}
         platforms: ${{ env.platforms }}
         push: true
-        tags: ${{ env.ecr_repository_uri }}:${{ steps.tag.outputs.image_tag }}, ${{ env.ecr_repository_uri }}:latest
+        tags: |
+          ${{ env.ecr_repository_uri }}:${{ steps.tag.outputs.image_tag }}${{ steps.dockerfile-suffix.outputs.suffix }},
+          ${{ env.ecr_repository_uri }}:latest${{ steps.dockerfile-suffix.outputs.suffix }}
     - name: Configure settings for PR comment
       id: pr-data
       if: ${{ !cancelled() }}
@@ -161,9 +189,10 @@ runs:
         set -euo pipefail
         if ${{ contains(steps.*.outcome, 'failure') }}; then
           echo "color=cc0000" >> $GITHUB_OUTPUT
-          echo "message=😞 The build of *${{ inputs.context }}* image failed." >> $GITHUB_OUTPUT
+          echo "message=😞 The build of *${{ inputs.context }}* image with version *${{ steps.tag.outputs.image_tag }}* failed." >> $GITHUB_OUTPUT
         else
           echo "color=28a745" >> $GITHUB_OUTPUT
+          echo "message=The build of *${{ inputs.context }}* image with version *${{ steps.tag.outputs.image_tag }}* was successful! :rocket:" >> $GITHUB_OUTPUT
         fi
     - name: Send notification to slack
       if: ${{ !cancelled() }}
@@ -191,4 +220,4 @@ runs:
                   value: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.job }}>
                 - title: Repository
                   short: true
-                  value: <https://github.com/${{ github.repository }}/blob/main/${{ inputs.context }}/Dockerfile|${{ github.repository }}>
+                  value: <https://github.com/${{ github.repository }}/blob/main/${{ inputs.context }}/${{ inputs.dockerfile }}|${{ github.repository }}>

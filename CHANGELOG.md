@@ -1,6 +1,11 @@
 # Changelog
 
-## 2025-10-04
+## 2025-10-06
+
+[v4.7]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/31)
+- Adaptation of the `build-image` action for use in `saritasa-devops-docker-images`
 
 [v4.6]
 
