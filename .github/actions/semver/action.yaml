@@ -48,7 +48,7 @@ runs:
         set -o pipefail
         if [[ "${{runner.os}}" == "Windows" ]]; then
             choco upgrade jq
-            choco install xmlstarlet
+            choco install xmlstarlet.portable
         elif [[ "${{runner.os}}" == "Linux" ]]; then
             sudo apt update && sudo apt install xmlstarlet jq -y
         elif [[ "${{runner.os}}" == "macOS" ]]; then
