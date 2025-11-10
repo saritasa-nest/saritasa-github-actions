@@ -47,8 +47,8 @@ runs:
       run: |
         set -o pipefail
         if [[ "${{runner.os}}" == "Windows" ]]; then
-            powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
-            choco upgrade xmlstarlet jq
+            choco upgrade jq
+            choco install xmlstarlet
         elif [[ "${{runner.os}}" == "Linux" ]]; then
             sudo apt update && sudo apt install xmlstarlet jq -y
         elif [[ "${{runner.os}}" == "macOS" ]]; then
