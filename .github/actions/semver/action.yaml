@@ -47,8 +47,43 @@ runs:
       run: |
         set -o pipefail
         if [[ "${{runner.os}}" == "Windows" ]]; then
-            choco upgrade jq
-            choco install xmlstarlet.portable
+
+          choco upgrade -y jq
+          # https://sourceforge.net/projects/xmlstar/files/latest/download
+          # access is blocked in CI/CD, so we use s3
+          # If still missing, HTTPS fallback (NOTE the backslashes before all $)
+          if ! command -v xmlstarlet >/dev/null 2>&1 && ! command -v xml.exe >/dev/null 2>&1; then
+            powershell -NoProfile -ExecutionPolicy Bypass -Command "\
+              \$ProgressPreference = 'SilentlyContinue'; \
+              [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
+              \$u = 'https://saritasa-public-misc.s3.us-west-2.amazonaws.com/xmlstarlet-1.6.1-win32.zip'; \
+              \$tmp = Join-Path \$env:TEMP 'xmlstarlet.zip'; \
+              Invoke-WebRequest -Uri \$u -OutFile \$tmp -UseBasicParsing -MaximumRedirection 5; \
+              \$dst = Join-Path \$env:USERPROFILE 'xmlstarlet'; \
+              if (Test-Path \$dst) { Remove-Item -Recurse -Force \$dst }; \
+              New-Item -Force -ItemType Directory \$dst | Out-Null; \
+              Expand-Archive -LiteralPath \$tmp -DestinationPath \$dst -Force; \
+              Remove-Item \$tmp -Force; \
+              \$exe = Get-ChildItem \$dst -Recurse -Filter xml*.exe | Select-Object -First 1; \
+              if (\$exe) { Write-Host ('xmlstarlet installed at: ' + \$exe.FullName) } else { Write-Error 'xmlstarlet.exe not found after extract'; exit 1 }"
+
+              # Windows path where xml.exe actually is
+              XML_DIR_WIN="$USERPROFILE\\xmlstarlet\\xmlstarlet-1.6.1"
+
+              # Convert to POSIX path for Git Bash PATH
+              XML_DIR_POSIX="$(cygpath -u "$XML_DIR_WIN")"
+
+              # Make available in THIS step
+              export PATH="$XML_DIR_POSIX:$PATH"
+              hash -r  # refresh bash's command lookup cache
+
+              # Make available to NEXT steps (use Windows path here)
+              printf '%s\r\n' "$XML_DIR_WIN" >> "$GITHUB_PATH"
+
+              # Sanity check
+              command -v xml.exe || { echo "xml.exe still not on PATH (checked POSIX: $XML_DIR_POSIX)"; exit 1; }
+
+          fi
         elif [[ "${{runner.os}}" == "Linux" ]]; then
             sudo apt update && sudo apt install xmlstarlet jq -y
         elif [[ "${{runner.os}}" == "macOS" ]]; then
