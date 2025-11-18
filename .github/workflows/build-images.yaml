@@ -91,7 +91,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Build and publish backend buildpack builder image
-        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@feature/update-build-image
+        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@fix/build-images-multiple-tags
+
         with:
           context: ${{ matrix.context }}
           dockerfile: ${{ matrix.dockerfile }}

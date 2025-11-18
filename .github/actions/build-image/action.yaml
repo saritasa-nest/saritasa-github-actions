@@ -101,17 +101,17 @@ runs:
         block_size=50
         url="${{ inputs.dockerhub_registry_url }}/repositories/${docker_repository}/tags"
         total_tags=$(curl -s ${url} | jq -r '.count')
-        tag=""
-        while [[ -z ${tag} && ${page} -le ${total_tags} ]]; do
+        tag=null
+        while [[ ${tag} == null && ${page} -le ${total_tags} ]]; do
           # the authorization token is added to the request if it has a non-empty value
           tag=$(curl \
             -s ${token:+-H "Authorization: JWT ${{ steps.dockerhub-token.outputs.token }}"} \
             "${url}?page_size=${block_size}&page=${page}" \
             | jq -r --arg digest "${target_digest}" \
-            '.results // [] | .[] | select(.digest == $digest and .name != "latest") | .name')
+            '.results // [] | [.[] | select(.digest == $digest and .name != "latest") | .name] | sort | first')
           ((page+=1))
         done
-        if [ -z ${tag} ]; then
+        if [[ ${tag} == null ]]; then
           echo "❗️Tag for digest ${target_digest} not found"
           exit 1
         fi
