@@ -89,7 +89,7 @@ INFORM_VERSION=
 # Output:
 #	Branch name
 _get_main_branch_name(){
-	git branch -r --format='%(refname:short)' | grep "ios/main\|master" -m1
+	git branch -r --format='%(refname:short)' | grep -E '\b(ios/main)$' -m1
 }
 
 #######################################
