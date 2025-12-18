@@ -39,7 +39,7 @@ join_by() {
 
 ## REGEX for matching for MajorMinorPatch (MMP) from tag
 ## Proceed result to BASH_REMATCH: https://www.bashsupport.com/bash/variables/bash/bash_rematch/
-MMP_TAG_REGEX="^v?([0-9]+\.[0-9]+\.[0-9]+)"
+MMP_TAG_REGEX='^([0-9]+\.[0-9]+\.[0-9]+)-ios$'
 
 ## Default value for MajorMinorPatch (MMP) when it can't be got from tag/branch name
 MMP_UNKNOWN=${MMP_UNKNOWN:-"0.0.0"}
@@ -101,14 +101,7 @@ _get_main_branch_name(){
 # Output:
 #	Branch name
 _get_branch_name(){
-	LOG_PREFIX="get_branch_name:"
-	BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-	if [[ $BRANCH == HEAD ]]; then
-		pecho "We are in detached HEAD state, digging deeper"
-		BRANCH="$(git --no-pager show -s --pretty=%D HEAD | awk -F, '{print $NF}' | tr -d ' ')"
-	fi
-	pecho "Found \"$BRANCH\" branch"
-	echo $BRANCH
+	git rev-parse --abbrev-ref HEAD
 }
 
 #######################################
@@ -134,14 +127,13 @@ _get_commit_weight(){
 get_MMP_TAG(){
 	local LOG_PREFIX="get_MMP_TAG: "
 	local BRANCH=${1:-HEAD}
-	local MAIN_BRANCH=$(_get_main_branch_name)
 	local TAG
 	if [[ $BRANCH =~ ios/main|master ]]; then
 		pecho "Processing \"$BRANCH\" as ios/main branch"
-		TAG="$(git tag --sort='-creatordate' --merged $BRANCH 2>/dev/null || echo "")"
+		TAG="$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1 --branches="$BRANCH" --quiet) 2>/dev/null || echo "")"
 	else
 		pecho "Processing \"$BRANCH\" as non-main branch"
-		TAG=$(git tag --sort='-creatordate' --merged $BRANCH --no-merged $MAIN_BRANCH 2>/dev/null || echo "")
+		TAG=$(git describe --tags --exact-match "$BRANCH" 2>/dev/null || echo "")
 	fi
 
 	if [[ -z $TAG ]]; then
@@ -150,7 +142,7 @@ get_MMP_TAG(){
 	fi
 
 	if [[ ! $TAG =~ $MMP_TAG_REGEX ]]; then
-		pecho "Error to fetch MMP_TAG for $BRANCH ['$TAG']: wrong format. Expected '[v]x.x.x'"
+		pecho "Error to fetch MMP_TAG for $BRANCH ['$TAG']: wrong format. Expected 'x.x.x-ios'"
 		return 1
 	fi
 
