@@ -140,7 +140,8 @@ runs:
         push: true
         tags: |
           ${{ env.ecr_repository_uri }}:${{ steps.tag.outputs.image_tag }}${{ steps.dockerfile-suffix.outputs.suffix }},
-          ${{ env.ecr_repository_uri }}:latest${{ steps.dockerfile-suffix.outputs.suffix }}
+          ${{ env.ecr_repository_uri }}:latest${{ steps.dockerfile-suffix.outputs.suffix }},
+          ${{ env.ecr_repository_uri }}:latest
     - name: Configure settings for PR comment
       id: pr-data
       if: ${{ !cancelled() }}
@@ -165,12 +166,14 @@ runs:
         jq -n \
           --arg aws_account "${{ env.aws_account }}" \
           --arg aws_region "${{ env.aws_region }}" \
+          --arg ecr_type "${{ env.ECR_TYPE }}" \
           --arg ecr_repo "${{ env.ecr_repository_name }}" \
           --arg digest "${{ steps.build-image.outputs.digest }}" \
             '{
               images: [{
                 aws_account: $aws_account,
                 aws_region: $aws_region,
+                ecr_type: $ecr_type,
                 ecr_repo: $ecr_repo,
                 digest: $digest
               }]

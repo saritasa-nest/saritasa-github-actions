@@ -91,7 +91,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Build and publish backend buildpack builder image
-        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@v4.8
+        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@feature/add-latest-tag
 
         with:
           context: ${{ matrix.context }}
@@ -114,6 +114,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: saritasa-nest/saritasa-github-actions
+          ref: feature/add-latest-tag
           sparse-checkout: .github/actions/build-image/pr-comment-template.j2
           path: pr-comment-template
           sparse-checkout-cone-mode: false
