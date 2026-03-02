@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-03-02
+
+[v4.9]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/33)
+- Updated trivy version to `v0.69.2` in `security-audit` action
+
+
 ## 2025-10-06
 
 [v4.7]
