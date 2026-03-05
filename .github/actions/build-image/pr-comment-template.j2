@@ -11,7 +11,7 @@ Author: @{{ author }}
 {%- if status == 'success' %}
 Created images:
 {%- for image in images %}
-▶ [`{{ image.ecr_repo }}`](https://{{ image.aws_region }}.console.aws.amazon.com/ecr/repositories/private/{{ image.aws_account }}/{{ image.ecr_repo }}/_/image/{{ image.digest }}/details)
+▶ [`{{ image.ecr_repo }}`](https://{{ image.aws_region }}.console.aws.amazon.com/ecr/repositories/{{ image.ecr_type }}/{{ image.aws_account }}/{{ image.ecr_repo }}/_/image/{{ image.digest }}/details)
 {%- endfor %}
 {%- endif %}
 
