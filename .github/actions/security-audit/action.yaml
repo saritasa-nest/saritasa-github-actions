@@ -79,7 +79,7 @@ runs:
         pip3 install jinja2
 
     - name: Install trivy
-      uses: aquasecurity/setup-trivy@v0.2.3
+      uses: aquasecurity/setup-trivy@v0.2.6
       with:
         version: ${{inputs.trivy-version}}
 
