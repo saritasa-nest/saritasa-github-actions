@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-03-20
+
+[v5.2]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/36)
+- Updated `aquasecurity/trivy-action` to `0.35.0` version
+
 ## 2026-03-02
 
 [v4.9]
