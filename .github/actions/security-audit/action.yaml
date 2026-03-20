@@ -98,7 +98,7 @@ runs:
         > data.json
 
     - name: Run trivy scanner in fs mode
-      uses: aquasecurity/trivy-action@0.30.0
+      uses: aquasecurity/trivy-action@0.35.0
       if: inputs.enable-trivy-check == 'true'
       id: trivy-check
       with:
@@ -124,7 +124,7 @@ runs:
         echo reactions="confused" > $GITHUB_ENV
 
     - name: Run vulnerability scanner in fs mode
-      uses: aquasecurity/trivy-action@0.30.0
+      uses: aquasecurity/trivy-action@0.35.0
       if: inputs.enable-vulnerability-checks == 'true'
       id: vulnerability-check
       with:
