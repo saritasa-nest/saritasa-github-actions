@@ -154,6 +154,12 @@ runs:
     - name: Run jira pre-commit hook
       shell: bash
       run: |
+        # Check if `.pre-commit-config.yaml` has a jira-pre-commit hook
+        if ! grep -q "id: *jira-pre-commit" .pre-commit-config.yaml; then
+          echo "No jira-pre-commit hook found. Skipping Jira key check"
+          exit 0
+        fi
+
         commits_range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
 
         # Save commit logs in a "COMMIT_HASH|AUTHOR|COMMIT_MESSAGE" format
