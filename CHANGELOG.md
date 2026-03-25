@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-03-23
+
+[v5.3]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/37)
+- Added `client_session_timeout_seconds` for MCP server in `pr-summary` action; 
+- Added code changes size limit with truncation to prevent exceeding model context window
+
 ## 2026-03-20
 
 [v5.2]
@@ -13,7 +21,6 @@
 
 - [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/33)
 - Updated trivy version to `v0.69.2` in `security-audit` action
-
 
 ## 2025-10-06
 
