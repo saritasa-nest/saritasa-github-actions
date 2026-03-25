@@ -35,8 +35,9 @@ inputs:
       Guidelines:
       - Focus on the overall purpose, impact, and outcomes of the changes.  
         Think in terms of features, fixes, improvements, integrations, or workflow changes.  
-      - Ignore trivial or mechanical edits (e.g. CHANGELOG.md, .terraform-version, .terraform.lock.hcl, README.md, 
-        version bumps, config alignment, boilerplate replacements, formatting-only docs changes).  
+      - Ignore trivial or mechanical edits (e.g. .terraform-version, .terraform.lock.hcl, 
+        version bumps, config alignment, boilerplate replacements, formatting changes).  
+      - Ignore any changes to README.md and CHANGELOG.md files completely.
       - Do not list changes per file. Do not mention file names explicitly.  
       - Group related changes together and capture them as one bullet point.  
       - Keep the summary concise: 1–3 bullet points, or one short paragraph if it reads better.  

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-03-25
+
+[v5.4]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/38)
+- Excluded `CHANGELOG.md` and `README.md` files from PR summary analysis in `pr-summary` action
+
 ## 2026-03-23
 
 [v5.3]
