@@ -165,7 +165,7 @@ class PrSummaryAgent:
         human_lines = []
         after_task = False
         for line in lines:
-            if line.startswith('Task:'):
+            if re.match(r'(?i)(task|jira):', line):
                 after_task = True
                 continue
             if not after_task:
