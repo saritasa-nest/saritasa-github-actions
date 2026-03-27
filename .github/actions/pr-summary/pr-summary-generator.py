@@ -151,7 +151,7 @@ class PrSummaryAgent:
 
         labels_to_apply = []
         if available_labels and 'LABELS:' in raw_output:
-            last_line = raw_output.rsplit('LABELS:', 1)[-1].strip().splitlines()[0]
+            last_line = raw_output.rsplit('LABELS:', 1)[-1].strip()
             labels_to_apply = [l.strip() for l in last_line.split(',') if l.strip() in available_labels]
             analysis = raw_output[:raw_output.rfind('LABELS:')].strip()
             if labels_to_apply:
