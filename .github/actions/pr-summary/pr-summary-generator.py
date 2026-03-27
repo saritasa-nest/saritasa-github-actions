@@ -101,29 +101,26 @@ class PrSummaryAgent:
         commits = list(pull_request.get_commits())
         jira_issues = extract_jira_issues(commits)
 
-        all_files, code_changes, doc_files = [], [], []
-
-        for f in files:
-            all_files.append(f.filename)
-            if f.filename.endswith('.md'):
-                doc_files.append(f.filename)
-
+        all_files, code_changes = [], []
         # Limit code changes to avoid exceeding the model's context window
         max_code_changes_chars = 900000
         code_changes_size = 0
         for f in files:
+            all_files.append(f.filename)
+            if code_changes_size >= max_code_changes_chars:
+                continue
             patch = f.patch or ''
             entry = f"{f.filename} ({f.status}): {patch}"
             if code_changes_size + len(entry) > max_code_changes_chars:
                 code_changes.append('... (remaining patches truncated due to size limit)')
-                break
+                code_changes_size = max_code_changes_chars
+                continue
             code_changes.append(entry)
             code_changes_size += len(entry)
 
         prompt_values = {
             'all_files': '\n'.join(all_files),
             'code_changes': '\n'.join(code_changes),
-            'doc_files': '\n'.join(doc_files),
         }
 
         full_prompt = self.config.openai_prompt.format(**prompt_values)
