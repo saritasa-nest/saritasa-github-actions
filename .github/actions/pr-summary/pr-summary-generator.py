@@ -105,9 +105,20 @@ class PrSummaryAgent:
 
         for f in files:
             all_files.append(f.filename)
-            code_changes.append(f"{f.filename} ({f.status}): {f.patch}")
             if f.filename.endswith('.md'):
                 doc_files.append(f.filename)
+
+        # Limit code changes to avoid exceeding the model's context window
+        max_code_changes_chars = 900000
+        code_changes_size = 0
+        for f in files:
+            patch = f.patch or ''
+            entry = f"{f.filename} ({f.status}): {patch}"
+            if code_changes_size + len(entry) > max_code_changes_chars:
+                code_changes.append('... (remaining patches truncated due to size limit)')
+                break
+            code_changes.append(entry)
+            code_changes_size += len(entry)
 
         prompt_values = {
             'all_files': '\n'.join(all_files),
@@ -117,16 +128,19 @@ class PrSummaryAgent:
 
         full_prompt = self.config.openai_prompt.format(**prompt_values)
 
+        # uvx may take time to download mcp-server-git.
+        # increased timeout prevent flaky McpError: Timed out failures
         async with MCPServerStdio(
             cache_tools_list=True,
             params={
                 'command': 'uvx',
                 'args': ['mcp-server-git', '--repository', str(self.config.repo_path)],
             },
+            client_session_timeout_seconds=30,
         ) as server:
             agent = Agent(
                 name='PR Summary Agent',
-                instructions=full_prompt,
+                instructions='You are a helpful assistant that generates pull request summaries.',
                 mcp_servers=[server],
                 model=self.config.model,
             )
