@@ -98,8 +98,13 @@ class PrSummaryAgent:
         files = list(pull_request.get_files())
         commits = list(pull_request.get_commits())
         jira_issues = extract_jira_issues(commits)
+        print(f'Found {len(commits)} commits, {len(files)} changed files, {len(jira_issues)} JIRA issues: {jira_issues or "none"}')
 
         available_labels = get_taggable_labels(repository)
+        if available_labels:
+            print(f'Available taggable labels ({len(available_labels)}): {", ".join(available_labels)}')
+        else:
+            print('No taggable labels found in repository (env=, c/, p/), skipping label selection')
 
         all_files, code_changes = [], []
         # Limit code changes to avoid exceeding the model's context window
@@ -142,13 +147,20 @@ class PrSummaryAgent:
             )
             result = await Runner.run(starting_agent=agent, input=full_prompt)
             raw_output = result.final_output.strip()
+        print(f'AI raw output:\n{raw_output}')
 
         labels_to_apply = []
         if available_labels and 'LABELS:' in raw_output:
             last_line = raw_output.rsplit('LABELS:', 1)[-1].strip().splitlines()[0]
             labels_to_apply = [l.strip() for l in last_line.split(',') if l.strip() in available_labels]
             analysis = raw_output[:raw_output.rfind('LABELS:')].strip()
+            if labels_to_apply:
+                print(f'Labels to apply: {", ".join(labels_to_apply)}')
+            else:
+                print('AI returned LABELS: line but no valid labels matched')
         else:
+            if available_labels:
+                print('AI did not return LABELS: line')
             analysis = raw_output
 
         summary = Summary(analysis, jira_issues, self.config.jira_url, self.config.model)
