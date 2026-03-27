@@ -2,10 +2,11 @@ import argparse
 import json
 import os
 import re
-from collections import defaultdict
-from typing import NamedTuple
+import collections
+import dataclasses
 
-class BaseInfo(NamedTuple):
+@dataclasses.dataclass
+class BaseInfo:
     """
     Base information of the scan result items.
     """
@@ -44,27 +45,27 @@ def convert_gitleaks_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
     Converts gitleaks analysis results into json format
 
-    Args: 
+    Args:
         run (dict): Data of the 'run' field from SARIF file
-    Returns: 
+    Returns:
         dict: A JSON object containing the conversion results
     """
-    files = defaultdict(dict)
+    files = collections.defaultdict(dict)
 
     for item in run['results']:
-        location, file_name, start_line, end_line = extract_base_info(item)
-        file_key = f"{start_line}-{end_line}"
+        base_info = extract_base_info(item)
+        file_key = f"{base_info.start_line}-{base_info.end_line}"
 
-        files[file_name].setdefault(file_key, {
-            'name': file_name,
+        files[base_info.file_name].setdefault(file_key, {
+            'name': base_info.file_name,
             'commits': [],
-            'startLine': start_line,
-            'endLine': end_line,
+            'startLine': base_info.start_line,
+            'endLine': base_info.end_line,
             'ruleId': item['ruleId'],
         })
 
         commitSha = item['partialFingerprints']['commitSha']
-        files[file_name][file_key]['commits'].append(commitSha)
+        files[base_info.file_name][file_key]['commits'].append(commitSha)
 
     return {
         'gitleaks': {
@@ -84,21 +85,21 @@ def strip_tags(text):
 
 def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
-    This function processes SARIF scan results and returns a dictionary 
+    This function processes SARIF scan results and returns a dictionary
     containing unencrypted secrets and vulnerabilities found in the scanned files.
 
-    Args: 
+    Args:
         run (dict): Data of the 'run' field from SARIF file
-    Returns: 
+    Returns:
         dict: A JSON object containing the conversion results
             {
                 'vulnerabilities': {...},  # Vulnerabilities results
                 'trivy': {...},            # Secrets results
             }
     """
-    secrets = defaultdict(list)
-    vulnerability_rules = defaultdict(list)
-    vulnerabilities = defaultdict(list)
+    secrets = collections.defaultdict(list)
+    vulnerability_rules = collections.defaultdict(list)
+    vulnerabilities = collections.defaultdict(list)
 
     # Preprocess rules to extract vulnerability descriptions.
     # This allows us to later supplement scan results by matching rule ID → description.
@@ -112,12 +113,12 @@ def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
 
     # Extract the following data from scan results:
     #   file name, start and end line numbers (to generate precise links to the content), and severity level.
-    # For vulnerabilities, we additionally extract 
+    # For vulnerabilities, we additionally extract
     #   package name, installed and fixed versions, rule description.
     for item in run['results']:
-        location, file_name, start_line, end_line = extract_base_info(item)
+        base_info = extract_base_info(item)
         # To specify the error type, need to convert the `severity` variable.
-        # From: 
+        # From:
         #   Artifact: app/config.yaml
         #   Type: Secret GitHub Fine-grained personal access tokens
         #   Severity: CRITICAL
@@ -125,20 +126,20 @@ def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
         #   title: title
         #   token: ********************************************sdf
         #   token-2: *****
-        # To: 
+        # To:
         #   CRITICAL
         severity = item['message']['text'].split('Severity: ')[1].split('\n')[0].strip()
         default = {
-            'name': file_name,
-            'startLine': start_line,
-            'endLine': end_line,
+            'name': base_info.file_name,
+            'startLine': base_info.start_line,
+            'endLine': base_info.end_line,
             'ruleId': item['ruleId'],
             'severity': severity,
         }
         rule = vulnerability_rules.get(item['ruleId'])
         if rule:
             text = item['message']['text']
-            vulnerabilities[file_name].append({
+            vulnerabilities[base_info.file_name].append({
                 'package': text.split('Package: ')[1].split('\n')[0].strip(),
                 'installedVersion': text.split('Installed Version: ')[1].split('\n')[0].strip(),
                 'fixedVersion':  text.split('Fixed Version: ')[1].split('\n')[0].strip(),
@@ -146,7 +147,7 @@ def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
                 **default,
             })
         else:
-            secrets[file_name].append(default.copy())
+            secrets[base_info.file_name].append(default.copy())
     return {
         'vulnerabilities': {
             'totalFiles': len(vulnerabilities.keys()),

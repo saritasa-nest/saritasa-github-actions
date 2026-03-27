@@ -36,10 +36,6 @@ inputs:
   gitleaks-slack-webhook:
     description: Slack webhook secret for `team-devops-expose-secrets` channel
     required: true
-  python-version:
-    description: Python version to install
-    required: false
-    default: "3.13"
   trivy-version:
     description: Trivy version to install
     required: false
@@ -54,29 +50,15 @@ runs:
       run: |
         exit 0
 
-    - name: Cache apt packages
-      uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+    - name: Install uv
+      id: setup-uv
+      uses: astral-sh/setup-uv@v7
       with:
-        packages: moreutils python3-pip
-        version: ${{inputs.cache-version}}
-
-    - name: Cache pip
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: pip-${{runner.os}}-jinja2
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{inputs.python-version}}
-
-    - name: Install dependencies
-      shell: bash
-      run: |
-        sudo apt update
-        sudo apt-get install -y moreutils python3-pip
-        pip3 install jinja2
+        enable-cache: true
+        activate-environment: true
+        cache-python: true
+        cache-suffix: "security-audit"
+        working-directory: ${{github.action_path}}
 
     - name: Install trivy
       uses: aquasecurity/setup-trivy@v0.2.6
@@ -84,6 +66,7 @@ runs:
         version: ${{inputs.trivy-version}}
 
     - name: Prepare data.json for PR and Slack comments
+      working-directory: ${{github.action_path}}
       shell: bash
       run: |
         jq -n \
@@ -106,7 +89,7 @@ runs:
         scan-ref: .
         format: sarif
         exit-code: 1
-        output: trivy-results.sarif
+        output: ${{github.action_path}}/trivy-results.sarif
         scanners: secret
         skip-setup-trivy: true
         severity: HIGH,CRITICAL
@@ -115,10 +98,11 @@ runs:
 
     - name: Add trivy failure check results to data file
       shell: bash
+      working-directory: ${{github.action_path}}
       if: always() && steps.trivy-check.conclusion == 'failure'
       run: |
-        python3 ${{github.action_path}}/scripts/sarif-to-json.py trivy-results.sarif trivy-output.json trivy
-        # Add the contents of the trivy-output.json file to data.json, from which 
+        uv run scripts/sarif-to-json.py trivy-results.sarif trivy-output.json trivy
+        # Add the contents of the trivy-output.json file to data.json, from which
         # notifications about the results of secret checks are generated
         jq -s '.[0] * .[1]' trivy-output.json data.json | sponge data.json
         echo reactions="confused" > $GITHUB_ENV
@@ -132,7 +116,7 @@ runs:
         scan-ref: .
         format: sarif
         exit-code: 1
-        output: vulnerability-results.sarif
+        output: ${{github.action_path}}/vulnerability-results.sarif
         scanners: vuln
         skip-setup-trivy: true
         severity: HIGH,CRITICAL
@@ -141,10 +125,11 @@ runs:
 
     - name: Add vulnerability failure check results to data file
       shell: bash
+      working-directory: ${{github.action_path}}
       if: always() && steps.vulnerability-check.conclusion == 'failure'
       run: |
-        python3 ${{github.action_path}}/scripts/sarif-to-json.py vulnerability-results.sarif vulnerability-output.json trivy
-        # Add the contents of the vulnerability-output.json file to data.json, from which 
+        uv run scripts/sarif-to-json.py vulnerability-results.sarif vulnerability-output.json trivy
+        # Add the contents of the vulnerability-output.json file to data.json, from which
         # notifications about the results of secret checks are generated
         if [[ -f vulnerability-output.json ]]; then
           jq -s '.[0] * .[1]' vulnerability-output.json data.json | sponge data.json
@@ -163,10 +148,11 @@ runs:
 
     - name: Add gitleaks check results to data file
       shell: bash
+      working-directory: ${{github.action_path}}
       if: always() && inputs.enable-gitleaks-check == 'true'
       run: |
-        python3 ${{github.action_path}}/scripts/sarif-to-json.py results.sarif gitleaks-output.json gitleaks
-        # Add the contents of the gitleaks-output.json file to data.json, from which 
+        uv run scripts/sarif-to-json.py ${{github.workspace}}/results.sarif gitleaks-output.json gitleaks
+        # Add the contents of the gitleaks-output.json file to data.json, from which
         # notifications about the results of secret checks are generated
         if [[ -f gitleaks-output.json ]]; then
           jq -s '.[0] * .[1]' gitleaks-output.json data.json | sponge data.json
@@ -175,22 +161,23 @@ runs:
 
     - name: Prepare PR comment file
       shell: bash
+      working-directory: ${{github.action_path}}
       if: always()
       run: |
         TEMPLATES=()
         if [[ "${{inputs.enable-vulnerability-checks}}" == "true" ]]; then
-          TEMPLATES+=("${{github.action_path}}/templates/pr-comment-vulnerabilities-template.j2")
+          TEMPLATES+=("templates/pr-comment-vulnerabilities-template.j2")
         fi
         if [[ "${{inputs.enable-gitleaks-check}}" == "true" ]] || [[ "${{inputs.enable-trivy-check}}" == "true" ]]; then
-          TEMPLATES+=("${{github.action_path}}/templates/pr-comment-secrets-template.j2")
+          TEMPLATES+=("templates/pr-comment-secrets-template.j2")
         fi
         for TEMPLATE in "${TEMPLATES[@]}"; do
           OUT=pr-comment-secrets.md
           if [[ "$TEMPLATE" == *vulnerabilities* ]]; then
             OUT=pr-comment-vulnerabilities.md
           fi
-          python3 ${{github.action_path}}/scripts/generate-message.py "$TEMPLATE" data.json "$OUT"
-          cat "$OUT" >> $GITHUB_STEP_SUMMARY
+          uv run scripts/generate-message.py "$TEMPLATE" data.json "${{github.workspace}}/$OUT"
+          cat "${{github.workspace}}/$OUT" >> $GITHUB_STEP_SUMMARY
         done
 
     - name: Find PR comment with secret-check results
@@ -240,12 +227,13 @@ runs:
     # which could make it difficult to track critical secret leaks.
     - name: Prepare and send message to Slack
       shell: bash
+      working-directory: ${{github.action_path}}
       if: always() && (inputs.enable-gitleaks-check == 'true' || inputs.enable-trivy-check == 'true')
       run: |
-        python3 ${{github.action_path}}/scripts/generate-message.py \
-          ${{github.action_path}}/templates/slack-message-template.j2 \
-          data.json \
-          slack-message.json
+        uv run scripts/generate-message.py \
+               templates/slack-message-template.j2 \
+               data.json \
+               slack-message.json
         if [[ -s "slack-message.json" ]]; then
           curl -X POST -H 'Content-type: application/json' --data @slack-message.json ${{inputs.gitleaks-slack-webhook}}
         fi
