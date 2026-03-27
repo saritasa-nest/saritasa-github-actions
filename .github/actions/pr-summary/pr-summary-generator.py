@@ -99,6 +99,8 @@ class PrSummaryAgent:
         commits = list(pull_request.get_commits())
         jira_issues = extract_jira_issues(commits)
 
+        available_labels = get_taggable_labels(repository)
+
         all_files, code_changes = [], []
         # Limit code changes to avoid exceeding the model's context window
         max_code_changes_chars = 900000
@@ -119,6 +121,7 @@ class PrSummaryAgent:
         full_prompt = self.config.openai_prompt.format(
             all_files='\n'.join(all_files),
             code_changes='\n'.join(code_changes),
+            available_labels=', '.join(available_labels),
         )
 
         # uvx may take time to download mcp-server-git.
@@ -138,11 +141,21 @@ class PrSummaryAgent:
                 model=self.config.model,
             )
             result = await Runner.run(starting_agent=agent, input=full_prompt)
-            analysis = result.final_output.strip()
+            raw_output = result.final_output.strip()
+
+        labels_to_apply = []
+        if available_labels and 'LABELS:' in raw_output:
+            last_line = raw_output.rsplit('LABELS:', 1)[-1].strip().splitlines()[0]
+            labels_to_apply = [l.strip() for l in last_line.split(',') if l.strip() in available_labels]
+            analysis = raw_output[:raw_output.rfind('LABELS:')].strip()
+        else:
+            analysis = raw_output
 
         summary = Summary(analysis, jira_issues, self.config.jira_url, self.config.model)
         new_body = str(summary) + self._extract_human_text(pull_request.body or '')
         pull_request.edit(body=new_body)
+        if labels_to_apply:
+            pull_request.add_to_labels(*labels_to_apply)
 
         return summary
 
@@ -176,6 +189,13 @@ class PrSummaryAgent:
 
         human_text = '\n'.join(human_lines).strip()
         return ('\n\n' + human_text) if human_text else ''
+
+def get_taggable_labels(repository) -> List[str]:
+    """Return labels with env=, c/, or p/ prefixes from the repository."""
+    return [
+        label.name for label in repository.get_labels()
+        if re.match(r'^(env=|c/|p/)', label.name)
+    ]
 
 def extract_jira_issues(commits: List[Commit]) -> Set[str]:
     """

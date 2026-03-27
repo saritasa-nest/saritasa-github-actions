@@ -51,7 +51,13 @@ inputs:
       Code changes:
       {code_changes}
 
-      Your response (start with bullet points immediately):
+      Your response (start with bullet points immediately).
+
+      Available PR labels: {available_labels}
+      At the very end of your response, add a line in this exact format:
+      LABELS: label1, label2
+      Select only labels that are relevant to the changes.
+      If no labels are relevant, write: LABELS:
   pr-number:
     description: PR number to update with the generated summary
     required: true
