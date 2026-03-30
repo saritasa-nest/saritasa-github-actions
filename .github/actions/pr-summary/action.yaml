@@ -51,7 +51,16 @@ inputs:
       Code changes:
       {code_changes}
 
-      Your response (start with bullet points immediately):
+      Your response (start with bullet points immediately).
+
+      Available PR labels: {available_labels}
+      At the very end of your response, add a line in this exact format:
+      LABELS: label1, label2
+      Rules for label selection — follow strictly, do not infer or guess. Use only the "Changed files" list above, not code content:
+      - `env=X`: add only if X (e.g. `dev`, `prod`) literally appears as a folder name in one of the changed file paths.
+      - `c/X`: add only if X literally appears as a folder name in one of the changed file paths.
+      - `p/X` or `p/X/Y`: add only if the full suffix after `p/` (e.g. `aws/eks`) literally appears as a subfolder sequence in one of the changed file paths.
+      If no labels match, write: LABELS:
   pr-number:
     description: PR number to update with the generated summary
     required: true
