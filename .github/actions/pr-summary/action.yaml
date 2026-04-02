@@ -83,17 +83,4 @@ runs:
         python ${{github.action_path}}/pr-summary-generator.py \
           --jira-url "${{inputs.jira-url}}" \
           --model "${{inputs.openai-model}}" \
-          --output summary.md \
           --pr-number "${{inputs.pr-number}}"
-
-    - name: Update PR Description
-      uses: nefrob/pr-description@v1.2.0
-      with:
-        content: summary.md
-        contentIsFilePath: true
-        # Completely replaces the entire PR description with summary.md content
-        # .* means "select everything" in the current description
-        regex: .*
-        # The 's' flag makes sure we replace the entire description, even if it has multiple lines
-        regexFlags: s
-        token: ${{inputs.github-token}}

@@ -2,15 +2,13 @@
 
 ## 2026-03-25
 
-[v5.4]
-
-- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/38)
-- Excluded `CHANGELOG.md` and `README.md` files from PR summary analysis in `pr-summary` action
-
-## 2026-03-23
-
 [v5.3]
 
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/39)
+- The `pr-summary` action no longer replaces human-written text
+- Resolved the problem with fake Jira keys
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/38)
+- Excluded `CHANGELOG.md` and `README.md` files from PR summary analysis in `pr-summary` action
 - [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/37)
 - Added `client_session_timeout_seconds` for MCP server in `pr-summary` action; 
 - Added code changes size limit with truncation to prevent exceeding model context window
