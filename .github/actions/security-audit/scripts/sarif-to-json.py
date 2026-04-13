@@ -44,9 +44,9 @@ def convert_gitleaks_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
     Converts gitleaks analysis results into json format
 
-    Args: 
+    Args:
         run (dict): Data of the 'run' field from SARIF file
-    Returns: 
+    Returns:
         dict: A JSON object containing the conversion results
     """
     files = defaultdict(dict)
@@ -74,22 +74,22 @@ def convert_gitleaks_results_to_json(run: dict[str, any]) -> dict[str, any]:
         },
     }
 
-def strip_tags(text):
+def strip_tags(text: str) -> str:
     """
     Removes <p> and </p> tags (with any attributes) and all newline characters from the string.
     This is necessary to avoid breaking markdown table formatting in the final output.
     """
     text = re.sub(r'<\s*/?\s*p[^>]*>', '', text)
-    return text.replace('\n', ' ')
+    return text.replace('\n', ' ').replace('\r', '')
 
 def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
-    This function processes SARIF scan results and returns a dictionary 
+    This function processes SARIF scan results and returns a dictionary
     containing unencrypted secrets and vulnerabilities found in the scanned files.
 
-    Args: 
+    Args:
         run (dict): Data of the 'run' field from SARIF file
-    Returns: 
+    Returns:
         dict: A JSON object containing the conversion results
             {
                 'vulnerabilities': {...},  # Vulnerabilities results
@@ -112,12 +112,12 @@ def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
 
     # Extract the following data from scan results:
     #   file name, start and end line numbers (to generate precise links to the content), and severity level.
-    # For vulnerabilities, we additionally extract 
+    # For vulnerabilities, we additionally extract
     #   package name, installed and fixed versions, rule description.
     for item in run['results']:
         location, file_name, start_line, end_line = extract_base_info(item)
         # To specify the error type, need to convert the `severity` variable.
-        # From: 
+        # From:
         #   Artifact: app/config.yaml
         #   Type: Secret GitHub Fine-grained personal access tokens
         #   Severity: CRITICAL
@@ -125,7 +125,7 @@ def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
         #   title: title
         #   token: ********************************************sdf
         #   token-2: *****
-        # To: 
+        # To:
         #   CRITICAL
         severity = item['message']['text'].split('Severity: ')[1].split('\n')[0].strip()
         default = {
