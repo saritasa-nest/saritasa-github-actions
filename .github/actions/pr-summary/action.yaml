@@ -29,21 +29,21 @@ inputs:
     description: The prompt template to use for OpenAI
     required: false
     default: >-
-      You are helping to generate a Pull Request summary that teammates will read.  
-      The goal is to describe what was done and why it matters, in a neutral and factual way.  
+      You are helping to generate a Pull Request summary that teammates will read.
+      The goal is to describe what was done and why it matters, in a neutral and factual way.
 
       Guidelines:
-      - Focus on the overall purpose, impact, and outcomes of the changes.  
-        Think in terms of features, fixes, improvements, integrations, or workflow changes.  
-      - Ignore trivial or mechanical edits (e.g. .terraform-version, .terraform.lock.hcl, 
-        version bumps, config alignment, boilerplate replacements, formatting changes).  
+      - Focus on the overall purpose, impact, and outcomes of the changes.
+        Think in terms of features, fixes, improvements, integrations, or workflow changes.
+      - Ignore trivial or mechanical edits (e.g. .terraform-version, .terraform.lock.hcl,
+        version bumps, config alignment, boilerplate replacements, formatting changes).
       - Ignore any changes to README.md and CHANGELOG.md files completely.
-      - Do not list changes per file. Do not mention file names explicitly.  
-      - Group related changes together and capture them as one bullet point.  
-      - Keep the summary concise: 1–3 bullet points, or one short paragraph if it reads better.  
-      - **Use only neutral, descriptive wording. Do not include subjective qualifiers or judgments** 
-        (e.g. avoid words like "first-class", "improved", "robust", "reliable", "important"). 
-      - Ignore formatting or typo fixes.  
+      - Do not list changes per file. Do not mention file names explicitly.
+      - Group related changes together and capture them as one bullet point.
+      - Keep the summary concise: 1–3 bullet points, or one short paragraph if it reads better.
+      - Use only neutral, descriptive wording. Do not include subjective qualifiers or judgments
+        (e.g. avoid words like "first-class", "improved", "robust", "reliable", "important").
+      - Ignore formatting or typo fixes.
 
       Changed files:
       {all_files}
@@ -51,16 +51,28 @@ inputs:
       Code changes:
       {code_changes}
 
-      Your response (start with bullet points immediately).
+      Available PR labels (use ONLY these exact values, do not invent new ones): {available_labels}
 
-      Available PR labels: {available_labels}
-      At the very end of your response, add a line in this exact format:
-      LABELS: label1, label2
-      Rules for label selection — follow strictly, do not infer or guess. Use only the "Changed files" list above, not code content:
-      - `env=X`: add only if X (e.g. `dev`, `prod`) literally appears as a folder name in one of the changed file paths.
-      - `c/X`: add only if X literally appears as a folder name in one of the changed file paths.
-      - `p/X` or `p/X/Y`: add only if the full suffix after `p/` (e.g. `aws/eks`) literally appears as a subfolder sequence in one of the changed file paths.
-      If no labels match, write: LABELS:
+      Repository structure for label selection:
+      - `envs/dev/`, `envs/prod/`, `envs/staging/` — environment-specific configs
+      - `stacks/apps/<component>/` — application component stacks
+      - `stacks/platforms/<platform>/` — platform/tool stacks (e.g. github, argocd, sentry)
+      - `stacks/aws/<service>/` — AWS service stacks (e.g. ecr, eks, rds)
+      - `.github/` — CI/CD workflows, not related to any label (do not add `p/github` for changes here)
+
+      Label selection rules:
+      - `env=X`: use folder names like `envs/dev/`, `envs/prod/` as a strong signal. Pick the matching label.
+      - `c/X` or `c/X/Y`: component label — analyze the changed files and pick the label that matches the affected application component.
+      - `p/X` or `p/X/Y`: platform label — analyze the changed files and pick the label that matches the platform tool or AWS service being configured.
+      Only include labels that exist exactly in the list above. If no labels match, use an empty list.
+
+      Respond ONLY with valid YAML in this exact format, no extra text:
+      summary: |
+        - bullet point 1
+        - bullet point 2
+      labels:
+        - label1
+        - label2
   pr-number:
     description: PR number to update with the generated summary
     required: true
@@ -77,7 +89,11 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install openai-agents uv PyGithub
+        pip install openai-agents uv PyGithub pyyaml
+        sudo apt-get install -y gh
+
+    - name: Install yq
+      uses: dcarbone/install-yq-action@v1.3.1 
 
     - name: Generate PR summary
       shell: bash
@@ -92,4 +108,17 @@ runs:
         python ${{github.action_path}}/pr-summary-generator.py \
           --jira-url "${{inputs.jira-url}}" \
           --model "${{inputs.openai-model}}" \
-          --pr-number "${{inputs.pr-number}}"
+          --pr-number "${{inputs.pr-number}}" \
+          --output-file /tmp/ai_output.yaml
+
+    - name: Apply labels from AI output
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{inputs.github-token}}
+      run: |
+        labels=$(yq '.labels[]' /tmp/ai_output.yaml | jq -Rs '[split("\n")[] | select(length > 0)]')
+        curl -s -X POST \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{github.repository}}/issues/${{inputs.pr-number}}/labels" \
+          -d "{\"labels\": $labels}"

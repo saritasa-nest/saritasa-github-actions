@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import os
 import re
+import yaml
 from dataclasses import dataclass
 from typing import Set, List
 
@@ -68,6 +69,7 @@ class AgentConfig:
     pr_number: int
     repo_path: str
     repository: str
+    output_file: str = None
 
 class PrSummaryAgent:
     """
@@ -143,19 +145,17 @@ class PrSummaryAgent:
             result = await Runner.run(starting_agent=agent, input=full_prompt)
             raw_output = result.final_output.strip()
 
-        labels_to_apply = []
-        if available_labels and 'LABELS:' in raw_output:
-            last_line = raw_output.rsplit('LABELS:', 1)[-1].strip()
-            labels_to_apply = [l.strip() for l in last_line.split(',') if l.strip() in available_labels]
-            analysis = raw_output[:raw_output.rfind('LABELS:')].strip()
-        else:
-            analysis = raw_output
+        parsed = yaml.safe_load(raw_output)
+        analysis = parsed.get('summary', raw_output).strip()
+        filtered_labels = [l for l in parsed.get('labels', []) if l in available_labels]
+
+        if self.config.output_file:
+            with open(self.config.output_file, 'w') as f:
+                yaml.dump({'summary': parsed.get('summary', ''), 'labels': filtered_labels}, f, allow_unicode=True, default_flow_style=False)
 
         summary = Summary(analysis, jira_issues, self.config.jira_url, self.config.model)
         new_body = str(summary) + self._extract_human_text(pull_request.body or '')
         pull_request.edit(body=new_body)
-        if labels_to_apply:
-            pull_request.add_to_labels(*labels_to_apply)
 
         return summary
 
@@ -235,6 +235,11 @@ def main():
         required=True,
         help='GitHub PR number'
     )
+    parser.add_argument(
+        '--output-file',
+        default=None,
+        help='Path to write raw AI YAML output'
+    )
     args = parser.parse_args()
 
     github_client = Github(auth=Auth.Token(os.environ['GITHUB_TOKEN']))
@@ -247,6 +252,7 @@ def main():
         pr_number=args.pr_number,
         repo_path=os.environ['REPO_PATH'],
         repository=os.environ['REPOSITORY'],
+        output_file=args.output_file,
     )
 
     pr_agent = PrSummaryAgent(config)
