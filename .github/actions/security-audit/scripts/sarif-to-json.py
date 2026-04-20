@@ -75,13 +75,13 @@ def convert_gitleaks_results_to_json(run: dict[str, any]) -> dict[str, any]:
         },
     }
 
-def strip_tags(text):
+def strip_tags(text: str) -> str:
     """
     Removes <p> and </p> tags (with any attributes) and all newline characters from the string.
     This is necessary to avoid breaking markdown table formatting in the final output.
     """
     text = re.sub(r'<\s*/?\s*p[^>]*>', '', text)
-    return text.replace('\n', ' ')
+    return text.replace('\n', ' ').replace('\r', '')
 
 def convert_trivy_results_to_json(run: dict[str, any]) -> dict[str, any]:
     """
