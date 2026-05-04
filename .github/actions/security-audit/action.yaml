@@ -36,10 +36,6 @@ inputs:
     description: Trivy version to install
     required: false
     default: "v0.69.2"
-  apt-cache-version:
-    description: Bump this value to reset the apt package cache
-    required: false
-    default: "1.2"
 
 runs:
   using: composite
@@ -59,13 +55,6 @@ runs:
         cache-python: true
         cache-suffix: "security-audit"
         working-directory: ${{github.action_path}}
-
-
-    - name: Install sponge(from moreutils package) for editing data.json in-place
-      uses: awalsh128/cache-apt-pkgs-action@v1
-      with:
-        packages: moreutils
-        version: ${{ inputs.apt-cache-version }}
 
     - name: Install trivy
       uses: aquasecurity/setup-trivy@v0.2.6
