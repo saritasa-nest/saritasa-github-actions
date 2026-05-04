@@ -89,7 +89,11 @@ runs:
       run: |
         python -m pip install --upgrade pip
         pip install openai-agents uv PyGithub pyyaml
-        sudo apt-get install -y gh
+
+    - name: Install latest gh CLI
+      uses: sersoft-gmbh/setup-gh-cli-action@v3
+      with:
+        version: stable
 
     - name: Install yq
       uses: dcarbone/install-yq-action@v1.3.1 
