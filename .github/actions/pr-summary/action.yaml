@@ -58,7 +58,6 @@ inputs:
       - `stacks/apps/<component>/` — application component stacks
       - `stacks/platforms/<platform>/` — platform/tool stacks (e.g. github, argocd, sentry)
       - `stacks/aws/<service>/` — AWS service stacks (e.g. ecr, eks, rds)
-      - `.github/` — CI/CD workflows, not related to any label (do not add `p/github` for changes here)
 
       Label selection rules:
       - `env=X`: use folder names like `envs/dev/`, `envs/prod/` as a strong signal. Pick the matching label.
@@ -98,27 +97,25 @@ runs:
     - name: Generate PR summary
       shell: bash
       env:
-        GITHUB_TOKEN: ${{inputs.github-token}}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
         OPENAI_API_KEY: ${{ inputs.openai-api-key }}
-        REPO_PATH: ${{github.workspace}}
-        REPOSITORY: ${{github.repository}}
+        REPO_PATH: ${{ github.workspace }}
+        REPOSITORY: ${{ github.repository }}
         OPENAI_PROMPT: ${{ inputs.openai-prompt }}
       run: |
         set -euo pipefail
-        python ${{github.action_path}}/pr-summary-generator.py \
-          --jira-url "${{inputs.jira-url}}" \
-          --model "${{inputs.openai-model}}" \
-          --pr-number "${{inputs.pr-number}}" \
+        python ${{ github.action_path }}/pr-summary-generator.py \
+          --jira-url "${{ inputs.jira-url }}" \
+          --model "${{ inputs.openai-model }}" \
+          --pr-number "${{ inputs.pr-number }}" \
           --output-file /tmp/ai_output.yaml
 
     - name: Apply labels from AI output
       shell: bash
       env:
-        GITHUB_TOKEN: ${{inputs.github-token}}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        labels=$(yq '.labels[]' /tmp/ai_output.yaml | jq -Rs '[split("\n")[] | select(length > 0)]')
-        curl -s -X POST \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/repos/${{github.repository}}/issues/${{inputs.pr-number}}/labels" \
-          -d "{\"labels\": $labels}"
+        labels=$(yq -r '.labels[]' /tmp/ai_output.yaml | paste -sd "," -)
+        if [ -n "$labels" ]; then
+          gh pr edit ${{ inputs.pr-number }} --add-label "$labels"
+        fi
