@@ -108,6 +108,16 @@ runs:
         OPENAI_PROMPT: ${{ inputs.openai-prompt }}
       run: |
         set -euo pipefail
+        # sample /tmp/ai_output.yaml:
+        #
+        # labels:
+        # - env=dev
+        # - p/github
+        # summary: '- Added pr-summary GitHub Action that generates PR descriptions using OpenAI
+        #
+        #   - Automatically extracts context from changed files
+        #
+        #   '
         python ${{ github.action_path }}/pr-summary-generator.py \
           --jira-url "${{ inputs.jira-url }}" \
           --model "${{ inputs.openai-model }}" \
