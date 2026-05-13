@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-03-27
+
+[v5.7]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/40)
+- The `pr-summary` action now automatically applies relevant PR labels based on changes
+
 ## 2026-04-27
 
 [v5.6]
@@ -9,7 +16,7 @@
 
 ## 2026-03-25
 
-[v5.3]
+[v5.4]
 
 - [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/39)
 - The `pr-summary` action no longer replaces human-written text
