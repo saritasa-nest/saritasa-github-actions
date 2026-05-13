@@ -150,36 +150,27 @@ runs:
           ~/pre-commit-tools
         key: ${{ steps.restore-pre-commit-cache.outputs.cache-primary-key }}
 
-    # Get commit messages and run Jira `pre-commit` hook on them
+    # Get the commit's message and run Jira `pre-commit` hook on it
     - name: Run jira pre-commit hook
       shell: bash
       run: |
-        commits_range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+        commit_hash="${{ github.event.pull_request.head.sha }}"
+        author="$(git log -1 --format='%an' "$commit_hash")"
+        commit_msg="$(git log -1 --format='%s' "$commit_hash")"
 
-        # Save commit logs in a "COMMIT_HASH|AUTHOR|COMMIT_MESSAGE" format
-        # For example: "876d2c4f300a32e424c31e0be35cad96c0d1e798|Commit Author|feat: add jira-pre-commit hook SD-1174"
-        git log --format="%H|%an|%s" --no-merges $commits_range > .git/COMMIT_EDITMSG
+        # Output commit link and message
+        echo "https://github.com/${{ github.repository }}/commit/$commit_hash -- $commit_msg"
 
-        # Process each commit in the range
-        while IFS= read -r commit; do
-          commit_hash=$(echo "$commit" | cut -d '|' -f 1)
-          author=$(echo "$commit" | cut -d '|' -f 2)
-          commit_msg=$(echo "$commit" | cut -d '|' -f 3-)
+        # Skip, if committed by a user listed in ignore-commit-authors
+        if [[ -n "${{ inputs.ignore-commit-authors }}" ]]; then
+          while IFS= read -r prefix; do
+            # Skip empty lines in the ignore-commit-authors list
+            [[ -z "$prefix" ]] && continue
+            # If the author name contains this prefix, skip JIRA check
+            echo "$author" | grep -Fq "$prefix" && { echo "Skipping JIRA check for commit by $author"; exit 0; }
+          done <<< "${{ inputs.ignore-commit-authors }}"
+        fi
 
-          # Output commit link and message
-          echo "https://github.com/${{ github.repository }}/commit/$commit_hash -- $commit_msg"
-
-          # Skip, if committed by a user listed in ignore-commit-authors
-          if [[ -n "${{ inputs.ignore-commit-authors }}" ]]; then
-            while IFS= read -r prefix; do
-              # Skip empty lines in the ignore-commit-authors list
-              [[ -z "$prefix" ]] && continue
-              # If the author name contains this prefix, skip JIRA check
-              echo "$author" | grep -Fq "$prefix" && { echo "Skipping JIRA check for commit by $author"; continue 2; }
-            done <<< "${{ inputs.ignore-commit-authors }}"
-          fi
-
-          # Run the Jira pre-commit hook on each commit message
-          echo "$commit_msg" > tmp_commit_msg.txt
-          pre-commit run jira-pre-commit --hook-stage commit-msg --commit-msg-filename tmp_commit_msg.txt
-        done < .git/COMMIT_EDITMSG
+        # Run the Jira pre-commit hook on the commit message
+        echo "$commit_msg" > tmp_commit_msg.txt
+        pre-commit run jira-pre-commit --hook-stage commit-msg --commit-msg-filename tmp_commit_msg.txt
