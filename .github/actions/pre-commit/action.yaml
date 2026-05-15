@@ -93,18 +93,25 @@ runs:
         while IFS="=" read -r tool_name tool_url; do
           [[ -z "$tool_name" || -z "$tool_url" ]] && continue
           tool_path="$tools_dir/$tool_name"
+          # Use a temporary filename to escape overwrite errors (i.e. in macOS)
+          download_path="$tools_dir/${tool_name}.download"
 
           echo "Downloading $tool_name from $tool_url..."
-          curl -L -o $tool_path "$tool_url"
+          curl -fsSL -o "$download_path" "$tool_url"
 
-          # Extract tools if they are compressed, otherwise make them executable
+          # Extract tools and make them executable
           if [[ $tool_url == *.tar.gz ]]; then
-            tar -xzf $tool_path -C $tools_dir
-          elif [[ $tool_url == *.zip ]]; then
-            unzip -o $tool_path -d $tools_dir
-          else
+            tar -xzf $download_path -C $tools_dir
             chmod +x $tool_path
+          elif [[ $tool_url == *.zip ]]; then
+            unzip -o $download_path -d $tools_dir
+            chmod +x $tool_path
+          else
+            mv $download_path $tool_path
+            chmod +x "$tool_path"
           fi
+
+          rm -f $download_path
         done <<< "${{ inputs.tools-list }}"
 
     # Add pre-commit-tools directory to PATH for all subsequent actions in this job
