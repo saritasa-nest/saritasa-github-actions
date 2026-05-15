@@ -141,6 +141,7 @@ runs:
         GITLEAKS_LICENSE: ${{inputs.gitleaks-license}}
         GITLEAKS_ENABLE_COMMENTS: false
         GITLEAKS_ENABLE_SUMMARY: false
+        GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
 
     - name: Add gitleaks check results to data file
       shell: bash
