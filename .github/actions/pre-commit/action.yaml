@@ -28,7 +28,7 @@ inputs:
     description: |
       Python version
       Python is needed to install `pre-commit`
-      `pre-commit` is installed via `uv tool install pre-commit --with pre-commit-uv` in the workflow
+      `pre-commit` is installed via `python -m pip install pre-commit` in the workflow
     required: false
     default: '3.x'
   tools-list:
@@ -50,15 +50,17 @@ inputs:
 runs:
   using: composite
   steps:
+    # Setup Python using the python-version from inputs
+    - name: Setup python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
 
     - name: Install uv
       id: setup-uv
       uses: astral-sh/setup-uv@v7
       with:
-        enable-cache: true
-        activate-environment: true
         working-directory: ${{github.action_path}}
-        # python-version: ${{ inputs.python-version }}
 
     # Get Terraform version, if a `.terraform-version` file exists in the repo
     # Otherwise, use the latest version
@@ -123,11 +125,12 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    # Install pre-commit via uv
+    # Install pre-commit via python
     - name: Install pre-commit
       shell: bash
       run: |
-        uv tool install pre-commit --with pre-commit-uv
+        python -m pip install pre-commit
+        python -m pip freeze --local
 
     # Run `pre-commit` checks (what checks to run are taken from the `.pre-commit-config.yaml`)
     - name: Run pre-commit checks
