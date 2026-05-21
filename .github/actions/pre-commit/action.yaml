@@ -7,28 +7,28 @@
   # │   This action is needed to block merges and pushes to `develop` and `main` branches if commits were made without   │
   # │   local pre-commit checks (e.g. commited/pushed using '--no-verify').                                              │
   # │                                                                                                                    │
-  # └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ 
+  # └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 name: pre-commit
-description: Action used to run pre-commit checks on the code. All pre-commit hooks are taken from the .pre-commit-config.yaml file. 
+description: Action used to run pre-commit checks on the code. All pre-commit hooks are taken from the .pre-commit-config.yaml file.
 inputs:
   ignore-commit-authors:
     description: |
       Whose commits to skip during Jira Task ID in commit message pre-commit check
       Autocommits made by bots (e.g. tekton-kustomize) usually don't have Jira Task ID in them
-      This input allows us to specify authors whose commit messages should be ignored      
+      This input allows us to specify authors whose commit messages should be ignored
     required: false
     default: tekton-kustomize
   node-version:
     description: |
       Node.js version
-      Node.js is needed for terraform_fmt pre-commit hook (used for formatting Terraform files) to work      
+      Node.js is needed for terraform_fmt pre-commit hook (used for formatting Terraform files) to work
     required: false
     default: '20'
   python-version:
     description: |
       Python version
       Python is needed to install `pre-commit`
-      `pre-commit` is installed via `python -m pip install pre-commit` in the workflow    
+      `pre-commit` is installed via `uv tool install pre-commit --with pre-commit-uv` in the workflow
     required: false
     default: '3.x'
   tools-list:
@@ -50,11 +50,15 @@ inputs:
 runs:
   using: composite
   steps:
-    # Setup Python using the python-version from inputs
-    - name: Setup python
-      uses: actions/setup-python@v5
+
+    - name: Install uv
+      id: setup-uv
+      uses: astral-sh/setup-uv@v7
       with:
-        python-version: ${{ inputs.python-version }}
+        enable-cache: true
+        activate-environment: true
+        working-directory: ${{github.action_path}}
+        # python-version: ${{ inputs.python-version }}
 
     # Get Terraform version, if a `.terraform-version` file exists in the repo
     # Otherwise, use the latest version
@@ -119,12 +123,11 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    # Install pre-commit via python
+    # Install pre-commit via uv
     - name: Install pre-commit
       shell: bash
       run: |
-        python -m pip install pre-commit
-        python -m pip freeze --local
+        uv tool install pre-commit --with pre-commit-uv
 
     # Run `pre-commit` checks (what checks to run are taken from the `.pre-commit-config.yaml`)
     - name: Run pre-commit checks
