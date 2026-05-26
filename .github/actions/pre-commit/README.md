@@ -14,7 +14,7 @@ If the commit/push was made without running local pre-commit checks (e.g. using 
 
 1. Setup:
 
-- Installs Python, Node.js, and Terraform.
+- Installs Python, uv, Node.js, and Terraform.
 - Installs needed pre-commit tools.
 - Caches tools to speed up future runs.
 
