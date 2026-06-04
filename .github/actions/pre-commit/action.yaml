@@ -168,7 +168,8 @@ runs:
       run: |
         commit_hash="${{ github.event.pull_request.head.sha }}"
         author="$(git log -1 --format='%an' "$commit_hash")"
-        commit_msg="$(git log -1 --format='%s' "$commit_hash")"
+        # Get commit message, including the commit body
+        commit_msg="$(git log -1 --format='%B' "$commit_hash")"
 
         # Output commit link and message
         echo "https://github.com/${{ github.repository }}/commit/$commit_hash -- $commit_msg"
