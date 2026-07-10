@@ -57,9 +57,13 @@ inputs:
       - `env=X`: pick based on environment indicators — folder names, environment-specific
         value files, or config directories.
       - `c/X` or `c/X/Y`: component label — assign when the PR modifies that component's
-        own codebase.
+        own codebase. A pipeline or CI configuration dedicated to a specific component
+        (e.g. autotests pipeline for android) should also get that component's label.
       - `p/X` or `p/X/Y`: platform label — assign when the PR modifies that platform's
         own codebase.
+      - `tooling`: assign for changes to CI/CD workflow files (.github/workflows/),
+        .pre-commit configs, or similar dev tooling. Do NOT use `p/github` for these —
+        `p/github` is only for changes to the GitHub platform stack (Apps, settings, integrations).
 
       Key principle: assign a label only if the changed files BELONG to that component
       or platform. Files that merely reference, import, or create custom resources
@@ -68,6 +72,12 @@ inputs:
 
       When a more specific label exists (e.g. `p/tekton/build-pipeline` vs `p/tekton`),
       prefer the more specific one. Do not assign both the generic and specific label.
+      For sub-labels (e.g. `p/tekton/build-pipeline`, `p/tekton/selenium-autotests`),
+      assign one only if the changed files are in that sub-label's own directory.
+      Do NOT pick a sub-label just because its name is textually similar to the PR content.
+      If no sub-label's directory matches exactly, use the closest parent label.
+      Match labels based on the directory or component being changed, not by keyword
+      similarity between the PR content and the label name.
 
       Only include labels that exist exactly in the list above. If no labels match, use an empty list.
 
