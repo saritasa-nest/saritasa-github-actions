@@ -58,26 +58,25 @@ inputs:
         value files, or config directories.
       - `c/X` or `c/X/Y`: component label — assign when the PR modifies that component's
         own codebase. A pipeline or CI configuration dedicated to a specific component
-        (e.g. autotests pipeline for android) should also get that component's label.
+        (e.g. autotests pipeline) should also get that component's label.
       - `p/X` or `p/X/Y`: platform label — assign when the PR modifies that platform's
         own codebase.
       - `tooling`: assign for changes to CI/CD workflow files (.github/workflows/),
         .pre-commit configs, or similar dev tooling. Do NOT use `p/github` for these —
         `p/github` is only for changes to the GitHub platform stack (Apps, settings, integrations).
 
-      Key principle: assign a label only if the changed files BELONG to that component
-      or platform. Files that merely reference, import, or create custom resources
-      managed by another platform do not count. Ownership is determined by which team
-      would review the change, not by what technologies the code mentions.
+      CRITICAL: assign a `p/` or `c/` label ONLY when the PR directly modifies that
+      platform/component ITSELF — not when the PR merely USES or REFERENCES it.
 
-      When a more specific label exists (e.g. `p/tekton/build-pipeline` vs `p/tekton`),
-      prefer the more specific one. Do not assign both the generic and specific label.
-      For sub-labels (e.g. `p/tekton/build-pipeline`, `p/tekton/selenium-autotests`),
-      assign one only if the changed files are in that sub-label's own directory.
-      Do NOT pick a sub-label just because its name is textually similar to the PR content.
-      If no sub-label's directory matches exactly, use the closest parent label.
-      Match labels based on the directory or component being changed, not by keyword
-      similarity between the PR content and the label name.
+      Examples of when NOT to assign a label:
+      - Creating a ScaledObject inside another component → do NOT assign `p/keda`
+      - Creating an ArgoCD Application to deploy something → do NOT assign `p/argocd`
+      - Adding a Karpenter NodePool inside a pipeline chart → do NOT assign `p/karpenter`
+      - Referencing Selenium Grid in a test pipeline → do NOT assign `p/selenium-grid`
+      - Referencing Replicator resources → do NOT assign `p/replicator`
+
+      When multiple `p/X/Y` sub-labels exist, assign one only if the changed files are
+      in that sub-label's own directory. Do not pick a sub-label by keyword similarity.
 
       Only include labels that exist exactly in the list above. If no labels match, use an empty list.
 
