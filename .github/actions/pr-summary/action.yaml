@@ -53,16 +53,22 @@ inputs:
 
       Available PR labels (use ONLY these exact values, do not invent new ones): {available_labels}
 
-      Repository structure for label selection:
-      - `envs/dev/`, `envs/prod/`, `envs/staging/` — environment-specific configs
-      - `stacks/apps/<component>/` — application component stacks
-      - `stacks/platforms/<platform>/` — platform/tool stacks (e.g. github, argocd, sentry)
-      - `stacks/aws/<service>/` — AWS service stacks (e.g. ecr, eks, rds)
-
       Label selection rules:
-      - `env=X`: use folder names like `envs/dev/`, `envs/prod/` as a strong signal. Pick the matching label.
-      - `c/X` or `c/X/Y`: component label — analyze the changed files and pick the label that matches the affected application component.
-      - `p/X` or `p/X/Y`: platform label — analyze the changed files and pick the label that matches the platform tool or AWS service being configured.
+      - `env=X`: pick based on environment indicators — folder names, environment-specific
+        value files, or config directories.
+      - `c/X` or `c/X/Y`: component label — assign when the PR modifies that component's
+        own codebase.
+      - `p/X` or `p/X/Y`: platform label — assign when the PR modifies that platform's
+        own codebase.
+
+      Key principle: assign a label only if the changed files BELONG to that component
+      or platform. Files that merely reference, import, or create custom resources
+      managed by another platform do not count. Ownership is determined by which team
+      would review the change, not by what technologies the code mentions.
+
+      When a more specific label exists (e.g. `p/tekton/build-pipeline` vs `p/tekton`),
+      prefer the more specific one. Do not assign both the generic and specific label.
+
       Only include labels that exist exactly in the list above. If no labels match, use an empty list.
 
       Respond ONLY with valid YAML in this exact format, no extra text:
