@@ -72,6 +72,14 @@ inputs:
       labels:
         - label1
         - label2
+  mcp-server-git-version:
+    description: Version of mcp-server-git to use (e.g. 2026.7.10)
+    required: false
+    default: 2026.7.10
+  mcp-server-git-constraints:
+    description: Dependency constraints for mcp-server-git uvx environment (e.g. mcp<2)
+    required: false
+    default: mcp>=2
   pr-number:
     description: PR number to update with the generated summary
     required: true
@@ -106,6 +114,8 @@ runs:
         REPO_PATH: ${{ github.workspace }}
         REPOSITORY: ${{ github.repository }}
         OPENAI_PROMPT: ${{ inputs.openai-prompt }}
+        MCP_SERVER_GIT_VERSION: ${{ inputs.mcp-server-git-version }}
+        MCP_SERVER_GIT_CONSTRAINTS: ${{ inputs.mcp-server-git-constraints }}
       run: |
         set -euo pipefail
         # sample /tmp/ai_output.yaml:

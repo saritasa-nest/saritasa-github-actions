@@ -11,14 +11,16 @@ A GitHub Action that automatically generates and updates pull request descriptio
 
 ## Inputs
 
-| Input            | Required | Default                          | Description                                    |
-| ---------------- | -------- | -------------------------------- | ---------------------------------------------- |
-| `github-token`   | Yes      | -                                | GitHub token for API access                    |
-| `openai-api-key` | Yes      | -                                | OpenAI API key for PR summary generation       |
-| `pr-number`      | Yes      | -                                | PR number to update with the generated summary |
-| `jira-url`       | No       | `https://saritasa.atlassian.net` | Base URL for JIRA instance                     |
-| `openai-model`   | No       | `gpt-5`                          | OpenAI model to use for summary generation     |
-| `openai-prompt`  | No       | [See below](#prompt-example)     | Custom prompt template for OpenAI              |
+| Input                        | Required | Default                          | Description                                                          |
+| ---------------------------- | -------- | -------------------------------- | -------------------------------------------------------------------- |
+| `github-token`               | Yes      | -                                | GitHub token for API access                                          |
+| `openai-api-key`             | Yes      | -                                | OpenAI API key for PR summary generation                             |
+| `pr-number`                  | Yes      | -                                | PR number to update with the generated summary                       |
+| `jira-url`                   | No       | `https://saritasa.atlassian.net` | Base URL for JIRA instance                                           |
+| `openai-model`               | No       | `gpt-5`                          | OpenAI model to use for summary generation                           |
+| `openai-prompt`              | No       | [See below](#prompt-example)     | Custom prompt template for OpenAI                                    |
+| `mcp-server-git-version`     | No       | `2026.7.10`                      | Version of mcp-server-git to use                                     |
+| `mcp-server-git-constraints` | No       | `mcp>=2`                         | Dependency constraints for mcp-server-git uvx environment            |
 
 ## OpenAI API Key
 
