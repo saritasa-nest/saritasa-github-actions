@@ -64,6 +64,8 @@ class AgentConfig:
     """
     github_client: Github
     jira_url: str
+    mcp_server_git_constraints: str
+    mcp_server_git_version: str
     model: str
     openai_prompt: str
     pr_number: int
@@ -128,11 +130,13 @@ class PrSummaryAgent:
 
         # uvx may take time to download mcp-server-git.
         # increased timeout prevent flaky McpError: Timed out failures
+        mcp_server_git_pkg = f'mcp-server-git@{self.config.mcp_server_git_version}'
+        uvx_args = ['--with', self.config.mcp_server_git_constraints, mcp_server_git_pkg, '--repository', str(self.config.repo_path)]
         async with MCPServerStdio(
             cache_tools_list=True,
             params={
                 'command': 'uvx',
-                'args': ['mcp-server-git', '--repository', str(self.config.repo_path)],
+                'args': uvx_args,
             },
             client_session_timeout_seconds=30,
         ) as server:
@@ -247,6 +251,8 @@ def main():
     config = AgentConfig(
         github_client=github_client,
         jira_url=args.jira_url,
+        mcp_server_git_constraints=os.environ['MCP_SERVER_GIT_CONSTRAINTS'],
+        mcp_server_git_version=os.environ['MCP_SERVER_GIT_VERSION'],
         model=args.model,
         openai_prompt=os.environ.get('OPENAI_PROMPT'),
         pr_number=args.pr_number,
