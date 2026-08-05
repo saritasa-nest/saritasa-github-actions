@@ -67,7 +67,7 @@ inputs:
         (IAM roles for GitHub Actions, OIDC federation, GitHub Apps Terraform).
         Do NOT assign `p/github` for workflow or dev tooling changes — those are `tooling`.
 
-      CRITICAL: assign a `p/` or `c/` label ONLY when the PR directly modifies that
+      CRITICAL: assign a p/ or c/ label ONLY when the PR directly modifies that
       platform/component ITSELF — not when the PR merely USES or REFERENCES it.
 
       Examples of when NOT to assign a label:
