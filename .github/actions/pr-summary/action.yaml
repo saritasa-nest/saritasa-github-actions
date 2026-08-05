@@ -62,8 +62,10 @@ inputs:
       - `p/X` or `p/X/Y`: platform label — assign when the PR modifies that platform's
         own codebase.
       - `tooling`: assign for changes to CI/CD workflow files (.github/workflows/),
-        .pre-commit configs, or similar dev tooling. Do NOT use `p/github` for these —
-        `p/github` is only for changes to the GitHub platform stack (Apps, settings, integrations).
+        .pre-commit configs, or similar dev tooling files within a repository.
+      - `p/github`: assign when the PR modifies the GitHub platform infrastructure
+        (IAM roles for GitHub Actions, OIDC federation, GitHub Apps Terraform).
+        Do NOT assign `p/github` for workflow or dev tooling changes — those are `tooling`.
 
       CRITICAL: assign a `p/` or `c/` label ONLY when the PR directly modifies that
       platform/component ITSELF — not when the PR merely USES or REFERENCES it.
