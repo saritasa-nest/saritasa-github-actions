@@ -4,7 +4,7 @@
 
 [v6.2]
 
-- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/48)
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/50)
 - Update prompt for `pr-summary` action
 
 ## 2026-03-27

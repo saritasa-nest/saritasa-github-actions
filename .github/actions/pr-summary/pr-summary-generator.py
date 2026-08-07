@@ -195,10 +195,10 @@ class PrSummaryAgent:
         return ('\n\n' + human_text) if human_text else ''
 
 def get_taggable_labels(repository) -> List[str]:
-    """Return labels with env=, c/, or p/ prefixes from the repository."""
+    """Return labels managed by AI: env=, c/, p/ prefixes and the tooling label."""
     return [
         label.name for label in repository.get_labels()
-        if re.match(r'^(env=|c/|p/)', label.name)
+        if re.match(r'^(env=|c/|p/)', label.name) or label.name == 'tooling'
     ]
 
 def extract_jira_issues(commits: List[Commit]) -> Set[str]:
