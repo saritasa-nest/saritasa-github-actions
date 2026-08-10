@@ -53,16 +53,33 @@ inputs:
 
       Available PR labels (use ONLY these exact values, do not invent new ones): {available_labels}
 
-      Repository structure for label selection:
-      - `envs/dev/`, `envs/prod/`, `envs/staging/` — environment-specific configs
-      - `stacks/apps/<component>/` — application component stacks
-      - `stacks/platforms/<platform>/` — platform/tool stacks (e.g. github, argocd, sentry)
-      - `stacks/aws/<service>/` — AWS service stacks (e.g. ecr, eks, rds)
-
       Label selection rules:
-      - `env=X`: use folder names like `envs/dev/`, `envs/prod/` as a strong signal. Pick the matching label.
-      - `c/X` or `c/X/Y`: component label — analyze the changed files and pick the label that matches the affected application component.
-      - `p/X` or `p/X/Y`: platform label — analyze the changed files and pick the label that matches the platform tool or AWS service being configured.
+      - `env=X`: pick based on environment indicators — folder names, environment-specific
+        value files, or config directories.
+      - `c/X` or `c/X/Y`: component label — assign when the PR modifies that component's
+        own codebase. A pipeline or CI configuration dedicated to a specific component
+        (e.g. autotests pipeline) should also get that component's label.
+      - `p/X` or `p/X/Y`: platform label — assign when the PR modifies that platform's
+        own codebase.
+      - `tooling`: assign for changes to CI/CD workflow files (.github/workflows/),
+        .pre-commit configs, or similar dev tooling files within a repository.
+      - `p/github`: assign when the PR modifies the GitHub platform infrastructure
+        (IAM roles for GitHub Actions, OIDC federation, GitHub Apps Terraform).
+        Do NOT assign `p/github` for workflow or dev tooling changes — those are `tooling`.
+
+      CRITICAL: assign a p/ or c/ label ONLY when the PR directly modifies that
+      platform/component ITSELF — not when the PR merely USES or REFERENCES it.
+
+      Examples of when NOT to assign a label:
+      - Creating a ScaledObject inside another component → do NOT assign `p/keda`
+      - Creating an ArgoCD Application to deploy something → do NOT assign `p/argocd`
+      - Adding a Karpenter NodePool inside a pipeline chart → do NOT assign `p/karpenter`
+      - Referencing Selenium Grid in a test pipeline → do NOT assign `p/selenium-grid`
+      - Referencing Replicator resources → do NOT assign `p/replicator`
+
+      When multiple `p/X/Y` sub-labels exist, assign one only if the changed files are
+      in that sub-label's own directory. Do not pick a sub-label by keyword similarity.
+
       Only include labels that exist exactly in the list above. If no labels match, use an empty list.
 
       Respond ONLY with valid YAML in this exact format, no extra text:
