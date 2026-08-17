@@ -6,6 +6,11 @@
   # │   All pre-commit hooks are taken from the `.pre-commit-config.yaml` file.                                          │
   # │   This action is needed to block merges and pushes to `develop` and `main` branches if commits were made without   │
   # │   local pre-commit checks (e.g. commited/pushed using '--no-verify').                                              │
+  # │   PR runs use caches from the PR itself or fall back to reusable caches from the default branch.                   │
+  # │   Pushes to the default branch populate reusable caches for future PRs.                                            │
+  # │                                                                                                                    │
+  # │   Additional tools required by pre-commit hooks can be defined in the repository's `mise.toml` file.               │
+  # │   If `mise.toml` doesn't exist, mise setup is skipped completely (used instead of legacy `tools-list`)             │
   # │                                                                                                                    │
   # └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 name: pre-commit
@@ -18,29 +23,13 @@ inputs:
       This input allows us to specify authors whose commit messages should be ignored
     required: false
     default: tekton-kustomize
-  node-version:
-    description: |
-      Node.js version
-      Node.js is needed for terraform_fmt pre-commit hook (used for formatting Terraform files) to work
-    required: false
-    default: '20'
   python-version:
     description: |
       Python version
       Python is needed to install `pre-commit`
-      `pre-commit` is installed via `python -m pip install pre-commit` in the workflow
+      Installed via `uv tool install pre-commit --with pre-commit-uv --force-reinstall`
     required: false
-    default: '3.x'
-  tools-list:
-    description: |
-      List of needed pre-commit tools with their download URLs
-      List of tools required for pre-commit hooks to function properly.
-      The format for specifying tools is: <tool_name>=<tool_url>
-      Example:
-      tools-list: |
-        terraform-docs=https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz
-        terragrunt=https://github.com/gruntwork-io/terragrunt/releases/download/v0.75.0/terragrunt_linux_amd64
-    required: true
+    default: '3'
   run-jira-pre-commit:
     description: |
       Whether to run Jira Task ID pre-commit hook.
@@ -50,90 +39,71 @@ inputs:
 runs:
   using: composite
   steps:
-    # Setup Python using the python-version from inputs
-    - name: Setup python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ inputs.python-version }}
-
+    # Setup uv to use for pre-commit installation
     - name: Install uv
       id: setup-uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@v10.0.0
       with:
-        working-directory: ${{github.action_path}}
+        # The version of Python to set UV_PYTHON to
+        python-version: ${{ inputs.python-version }}
+        # Enable the GitHub Actions cache for uv
+        enable-cache: true
+        # Glob pattern to match files relative to the repository root to control the cache
+        cache-dependency-glob: |
+          .pre-commit-config.yaml
+        # Ignore when nothing is found to cache
+        ignore-nothing-to-cache: true
 
-    # Get Terraform version, if a `.terraform-version` file exists in the repo
-    # Otherwise, use the latest version
-    - name: Get terraform version
+    # Install pre-commit via uv
+    - name: Install pre-commit
       shell: bash
       run: |
-        TERRAFORM_VERSION=$( [[ -f .terraform-version ]] && cat .terraform-version || echo "latest" )
-        echo "TERRAFORM_VERSION=$TERRAFORM_VERSION" >> $GITHUB_ENV
+        uv tool install pre-commit --with pre-commit-uv --force-reinstall
+        pre-commit --version
+        uv --version
 
-    # Setup Terraform using terraform_version from the step before
-    - name: Setup terraform
-      uses: hashicorp/setup-terraform@v3
+    # Setup repository-specific tools using mise
+    - name: Setup pre-commit tools
+      if: hashFiles('mise.toml') != ''
+      uses: jdx/mise-action@v4
       with:
-        terraform_version: ${{ env.TERRAFORM_VERSION }}
+        # Install tools defined in `mise.toml`
+        install: true
+        # Cache installed tools (default: true)
+        cache: true
 
-    # Restore `pre-commit` cache (both the hooks and tools)
+    # Restore `pre-commit` cache (for hooks)
+    # GitHub searches for the exact cache in the current PR first
+    # If it doesn't exist, checks the default branch
     - name: Restore pre-commit cache
       id: restore-pre-commit-cache
       uses: actions/cache/restore@v4
       with:
         path: |
           ~/.cache/pre-commit
-          ~/pre-commit-tools
-        key: pre-commit-cache-${{ hashFiles('.github/workflows/pre-commit.yaml', '.pre-commit-config.yaml') }}
+        key: pre-commit-cache-${{ runner.os }}-${{ runner.arch }}-python-${{ inputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-    # Install `pre-commit` tools from the tools-list input
-    # If cached, this step is skipped
-    - name: Install pre-commit tools
-      shell: bash
+    # Install missing pre-commit hook environments before running checks
+    - name: Install pre-commit hooks
       if: steps.restore-pre-commit-cache.outputs.cache-hit != 'true'
-      run: |
-        tools_dir="$HOME/pre-commit-tools"
-        mkdir -p $tools_dir
-
-        # Read tools list and install each tool based on its type
-        while IFS="=" read -r tool_name tool_url; do
-          [[ -z "$tool_name" || -z "$tool_url" ]] && continue
-          tool_path="$tools_dir/$tool_name"
-
-          echo "Downloading $tool_name from $tool_url..."
-          curl -L -o $tool_path "$tool_url"
-
-          # Extract tools if they are compressed, otherwise make them executable
-          if [[ $tool_url == *.tar.gz ]]; then
-            tar -xzf $tool_path -C $tools_dir
-          elif [[ $tool_url == *.zip ]]; then
-            unzip -o $tool_path -d $tools_dir
-          else
-            chmod +x $tool_path
-          fi
-        done <<< "${{ inputs.tools-list }}"
-
-    # Add pre-commit-tools directory to PATH for all subsequent actions in this job
-    # So even if the previous step was skipped, tools would still be added to GITHUB_PATH
-    - name: Add pre-commit-tools to PATH
       shell: bash
-      run: echo "$HOME/pre-commit-tools" >> $GITHUB_PATH
+      run: |
+        pre-commit install-hooks
 
-    # Setup Node.js since `terraform_fmt` depends on it
-    - name: Setup node
-      uses: actions/setup-node@v4
+    # Save `pre-commit` cache, so hooks don’t need to be installed every time
+    - name: Save pre-commit cache
+      id: save-pre-commit-cache
+      if: steps.restore-pre-commit-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
       with:
-        node-version: ${{ inputs.node-version }}
+        path: |
+          ~/.cache/pre-commit
+        key: ${{ steps.restore-pre-commit-cache.outputs.cache-primary-key }}
 
-    # Install pre-commit via python
-    - name: Install pre-commit
-      shell: bash
-      run: |
-        python -m pip install pre-commit
-        python -m pip freeze --local
-
-    # Run `pre-commit` checks (what checks to run are taken from the `.pre-commit-config.yaml`)
+    # Run `pre-commit` checks only on pull requests
+    # Pushes to the default branch only work w/ cache (restore/save/install)
     - name: Run pre-commit checks
+      if: github.event_name == 'pull_request'
       shell: bash
       # `pre-commit` checks are configured to run only on the files that were changed in the PR
       # This was implemented so that pre-commit reacts on the modified in the PR files only, instead of all files
@@ -149,22 +119,12 @@ runs:
         echo ${filtered_files[@]} | tr ' ' '\n'
         pre-commit run --show-diff-on-failure --color=always --files ${filtered_files[@]}
 
-    # Save `pre-commit` cache, so hooks and tools don’t need to be installed every time
-    # Cache is saved even if the pre-commit checks failed
-    - name: Save pre-commit cache
-      id: save-pre-commit-cache
-      if: always() && steps.restore-pre-commit-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          ~/.cache/pre-commit
-          ~/pre-commit-tools
-        key: ${{ steps.restore-pre-commit-cache.outputs.cache-primary-key }}
-
     # Get the commit's message and run Jira `pre-commit` hook on it
     - name: Run jira pre-commit hook
       shell: bash
-      if: inputs.run-jira-pre-commit == 'true'
+      if: |
+        github.event_name == 'pull_request' &&
+        inputs.run-jira-pre-commit == 'true'
       run: |
         commit_hash="${{ github.event.pull_request.head.sha }}"
         author="$(git log -1 --format='%an' "$commit_hash")"
