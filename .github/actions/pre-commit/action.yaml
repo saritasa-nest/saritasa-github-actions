@@ -42,7 +42,7 @@ runs:
     # Setup uv to use for pre-commit installation
     - name: Install uv
       id: setup-uv
-      uses: astral-sh/setup-uv@v10.0.0
+      uses: astral-sh/setup-uv@v10.0.1
       with:
         # The version of Python to set UV_PYTHON to
         python-version: ${{ inputs.python-version }}
