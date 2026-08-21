@@ -71,26 +71,35 @@ name: pre-commit
 on:
   pull_request:
     types:
-      - labeled
-      - unlabeled
       - opened
       - reopened
       - synchronize
+      - ready_for_review
       - closed
   # Separate PRs can use the same cache only if it's created on default branch (`main`)
   push:
     branches:
       - main
 jobs:
+  # ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  # │   PRE-COMMIT JOB                                                                                                   │
+  # │   ---                                                                                                              │
+  # │                                                                                                                    │
+  # │   The 'pre-commit' job checks out code from the repository, and uses a pre-commit composite action taken from      │
+  # │   saritasa-github-actions repository. All pre-commit hooks are taken from the .pre-commit-config.yaml file.        │
+  # │   This job is needed to reject merge and push to develop and main branches if pre-commit check failed.             │
+  # │   For example, if the code was committed/pushed with '--no-verify' and pre-commit checks didn't run locally.       │
+  # │                                                                                                                    │
+  # └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
   pre-commit:
     # Run job if it's a push event (push to default branch to create reusable cache)
-    # Or if PR wasn't created by RenovateBot, not in WIP, and isn't being Closed
+    # Or if PR wasn't created by RenovateBot, not in Draft, and isn't being Closed
     if: |
       github.event_name == 'push' ||
       (
         github.event.action != 'closed' &&
-        !contains(github.event.pull_request.labels.*.name, 'renovate') &&
-        !contains(github.event.pull_request.labels.*.name, 'wip')
+        github.event.pull_request.draft == false &&
+        !contains(github.event.pull_request.labels.*.name, 'renovate')
       )
     runs-on: saritasa-rocks-eks
     timeout-minutes: 15
@@ -102,11 +111,14 @@ jobs:
       - name: Run pre-commit checks
         uses: saritasa-nest/saritasa-github-actions/.github/actions/pre-commit@v6.3
         with:
-          python-version: '3.12'
+          # tekton-bot is used by infra-v3
+          # tekton-kustomize is used by infra-v2
           ignore-commit-authors: |-
+            tekton-bot
             tekton-kustomize
             saritasa-renovatebot
-  # Delete all caches created specifically for this PR
+          python-version: '3.12'
+  # Delete all caches created specifically for this PR (on closing/merge of the PR)
   # This includes pre-commit, mise and uv caches scoped to refs/pull/<PR>/merge
   cleanup-pr-cache:
     if: |
