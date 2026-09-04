@@ -42,7 +42,7 @@ runs:
     # Setup uv to use for pre-commit installation
     - name: Install uv
       id: setup-uv
-      uses: astral-sh/setup-uv@v10.0.1
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         # The version of Python to set UV_PYTHON to
         python-version: ${{ inputs.python-version }}
@@ -65,7 +65,7 @@ runs:
     # Setup repository-specific tools using mise
     - name: Setup pre-commit tools
       if: hashFiles('mise.toml') != ''
-      uses: jdx/mise-action@v4
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
       with:
         # Install tools defined in `mise.toml`
         install: true
@@ -77,7 +77,7 @@ runs:
     # If it doesn't exist, checks the default branch
     - name: Restore pre-commit cache
       id: restore-pre-commit-cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           ~/.cache/pre-commit
@@ -94,7 +94,7 @@ runs:
     - name: Save pre-commit cache
       id: save-pre-commit-cache
       if: steps.restore-pre-commit-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           ~/.cache/pre-commit
