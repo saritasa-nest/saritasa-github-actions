@@ -1,15 +1,41 @@
 name: build-images
 
+# Builds and publishes OCI images for changed Dockerfiles in a pull request
+#
+# The workflow determines target environments from `build:<environment>` PR labels, builds
+# each changed Dockerfile for the selected environments, publishes the resulting images,
+# reports build results in the pull request, and adds the `auto-merge` label when all
+# image builds succeed
+
 on:
   workflow_call:
     inputs:
       runner:
         type: string
         required: true
-    secrets:
-      dockerhub_token:
+      base_registry:
+        description: OCI registry hostname for authenticated base image pulls
+        type: string
         required: false
-      dockerhub_username:
+        default: docker.io
+      github_token_login:
+        description: |
+          Controls whether authentication to GitHub Container Registry using the job's GITHUB_TOKEN is enabled,
+          can be used together with other registry authentication options
+          To pull private images, the following is required:
+            1. `packages: read` permission
+            2. repository running the workflow must have `Read` access to the image
+          Actions access can be managed in image settings:
+            https://github.com/orgs/<org-name>/packages/container/<image-name>/settings
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      base_registry_username:
+        required: false
+      base_registry_password:
+        required: false
+      base_registries_auth:
         required: false
       slack_webhook_url:
         required: true
@@ -24,6 +50,8 @@ permissions:
   issues: write
   # to check which files have been changed in pr and create pr comments
   pull-requests: write
+  # to be able to pull private ghcr.io images
+  packages: read
 
 concurrency:
   group: build-images-${{ github.event.number }}-${{ github.event.label.name }}
@@ -36,16 +64,17 @@ jobs:
       matrix: ${{ steps.data.outputs.matrix }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Get changed Dockerfiles
         id: changed-files
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96  # v47.0.6
         with:
           files: |
             **/Dockerfile
             **/*.Dockerfile
       - name: Extract environments from labels and prepare matrix values
         id: data
+        shell: bash
         run: |
           set -euo pipefail
           # extract environments from pr labels
@@ -89,15 +118,17 @@ jobs:
       matrix: ${{ fromJson(needs.prepare-input-data.outputs.matrix) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
-      - name: Build and publish backend buildpack builder image
-        uses: saritasa-nest/saritasa-github-actions/.github/actions/build-image@v5.0
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Build and publish an image for ${{ matrix.context }}
+        uses: $/.github/actions/build-image
         with:
           context: ${{ matrix.context }}
           dockerfile: ${{ matrix.dockerfile }}
-          dockerhub_token: ${{ secrets.dockerhub_token }}
-          dockerhub_username: ${{ secrets.dockerhub_username }}
+          base_registry: ${{ inputs.base_registry }}
+          base_registry_username: ${{ secrets.base_registry_username }}
+          base_registry_password: ${{ secrets.base_registry_password }}
+          base_registries_auth: ${{ secrets.base_registries_auth }}
+          github_token_login: ${{ inputs.github_token_login }}
           environment: ${{ matrix.environment }}
           slack_webhook_url: ${{ secrets.slack_webhook_url }}
 
@@ -109,21 +140,23 @@ jobs:
       - prepare-input-data
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
-      - name: Checkout pr comment template
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Checkout PR comment template
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          repository: saritasa-nest/saritasa-github-actions
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           sparse-checkout: .github/actions/build-image/pr-comment-template.j2
           path: pr-comment-template
           sparse-checkout-cone-mode: false
       - name: Download data artifacts data for the PR comment template
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           merge-multiple: true
           path: pr-comment-data
           pattern: '!*.dockerbuild'
       - name: Create common file with vars for the jinja template
+        shell: bash
         run: |
           set -euo pipefail
           jq -s \
@@ -138,17 +171,23 @@ jobs:
               }
           ' pr-comment-data/*.json > pr-comment-data.json
       - name: Generate PR comment from jinja template
-        uses: cuchi/jinja2-action@v1.3.0
+        uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a  # v1.3.0
         with:
           data_file: pr-comment-data.json
           template: pr-comment-template/.github/actions/build-image/pr-comment-template.j2
           output_file: pr-comment.md
-      - name: Create or update a PR comment with docker build results
-        uses: edumserrano/find-create-or-update-comment@v3
+      - name: Find build-images comment
+        id: find-comment
+        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad  # v4.0.0
         with:
           issue-number: ${{ github.event.pull_request.number }}
-          body-includes: build-images workflow status
           comment-author: github-actions[bot]
+          body-includes: '<!-- saritasa-build-images -->'
+      - name: Create or update build-images comment
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9  # v5.0.0
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
           body-path: pr-comment.md
           edit-mode: append
 
@@ -160,8 +199,12 @@ jobs:
       - create-pr-comment
     steps:
       - name: Add auto-merge label
-        uses: buildsville/add-remove-label@v2.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          labels: auto-merge
-          type: add
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: ['auto-merge'],
+            })
