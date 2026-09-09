@@ -1,14 +1,15 @@
 ---
 name: build-image
 description: |
-  The action is launched in the PRs opened by the Renovate bot
-  when one or more of the tags `build:dev`, `build:staging`, `build:prod` are added,
-  and does the following:
-    - export environment variables from required files
-    - extract tag by image digest specified in Dockerfile
-    - build and publish image with received tag and `latest` tag
-    - create a json file with variables for the jinja template and upload it as an artifact
-    - send a notification to slack channel
+  Builds and publishes an OCI image for the specified environment:
+    - exports environment variables from the configured .env files
+    - authenticates to AWS ECR and configured OCI registries
+    - reads IMAGE_TAG and IMAGE_SHA Dockerfile ARGs, falling back to a registry lookup
+      to resolve the tag from the digest when needed
+    - configures QEMU and Buildx for multi-platform builds
+    - builds and publishes the image to AWS ECR with the resolved and `latest` tags
+    - uploads image metadata for the pull request comment
+    - sends the build result to Slack
 
 inputs:
   context:
@@ -17,22 +18,38 @@ inputs:
   dockerfile:
     description: dockerfile name
     required: true
-  dockerhub_registry_url:
-    description: dockerhub api registry url
-    required: false
-    default: https://registry.hub.docker.com/v2
-  dockerhub_token_url:
-    description: dockerhub api token url
-    required: false
-    default: https://hub.docker.com/v2/users/login/
-  dockerhub_token:
-    description: token for read-only access to dockerhub
+  base_registry:
+    description: OCI registry hostname for authenticated base image pulls
     required: false
     default: ''
-  dockerhub_username:
-    description: username for read-only access to dockerhub
+  base_registry_username:
+    description: OCI registry username
     required: false
     default: ''
+  base_registry_password:
+    description: OCI registry password (could be a PAT, robot-account token, etc)
+    required: false
+    default: ''
+  base_registries_auth:
+    description: |
+      An alternative input for authenticating to more than one OCI registry for base image pulls,
+      use it instead of the `base_registry_*` triplet when necessary. Example usage:
+      ```
+      - registry: docker.io
+        username: 💲{{ secrets.DOCKERHUB_USERNAME }}
+        password: 💲{{ secrets.DOCKERHUB_TOKEN }}
+      - registry: quay.io
+        username: 💲{{ secrets.QUAY_USERNAME }}
+        password: 💲{{ secrets.QUAY_PASSWORD }}
+      ```
+    required: false
+    default: ''
+  github_token_login:
+    description: |
+      Controls whether authentication to GitHub Container Registry using the job's GITHUB_TOKEN is enabled,
+      can be used together with other registry authentication inputs
+    required: false
+    default: 'false'
   environment:
     description: |
       the environment for which the image will be built:
@@ -47,22 +64,43 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Merge .env files to preserve the last-wins semantics
+      id: merge-env-files
+      shell: bash
+      env:
+        output: .env.merged
+      run: |
+        files=(
+          '.env'
+          '.env.${{ inputs.environment }}'
+          '${{ inputs.context }}/.env'
+          '${{ inputs.context }}/.env.${{ inputs.environment }}'
+        )
+        if [[ -f "${output}" ]]; then
+          echo "A file already exists at the output path: ${output}"
+          exit 1
+        fi
+        for file in "${files[@]}"; do
+          if [[ -f "${file}" ]]; then
+            cat "${file}" >> "${output}"
+            printf '\n' >> "${output}"
+          fi
+        done
     - name: Export environment variables from .env files
       id: env-vars
-      uses: aarcangeli/load-dotenv@v1
+      uses: xom9ikk/dotenv@d0a56edc74279820eabbe34477511327e710d0de  # v2.4.0
       with:
-        filenames: |
-          .env
-          .env.${{ inputs.environment }}
-          ${{ inputs.context }}/.env
-          ${{ inputs.context }}/.env.${{ inputs.environment }}
+        path: .
+        mode: merged
+        load-mode: strict
     - name: Configure AWS credentials
       id: aws-credentials
-      uses: aws-actions/configure-aws-credentials@v5.0.0
+      uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c  # v6.2.4
       with:
         aws-region: ${{ env.aws_region }}
         role-to-assume: ${{ env.aws_gha_role }}
     - name: Detect ECR type
+      id: ecr-type
       shell: bash
       run: |
         echo "ECR_TYPE=private" >> $GITHUB_ENV
@@ -71,52 +109,109 @@ runs:
         fi
     - name: Login to AWS ECR
       id: ecr
-      uses: aws-actions/amazon-ecr-login@v2.0.1
+      uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd  # v2.1.7
       with:
         registry-type: ${{ env.ECR_TYPE }}
-    - name: Get DockerHub API token
-      id: dockerhub-token
-      shell: bash
-      run: |
-        set -euo pipefail
-        # get dockerhub authorization token
-        # if the dockerhub username and password isn't passed, then we get the following response:
-        # {"detail":"Incorrect authentication credentials"}
-        # and in that case it's replaced with an empty value
-        token=$(curl -X POST \
-          -s -H "Content-Type: application/json" \
-          -d "{\"username\": \"${{ inputs.dockerhub_username }}\", \"password\": \"${{ inputs.dockerhub_token }}\"}" \
-          ${{ inputs.dockerhub_token_url }} | jq -r '.token // empty')
-        echo "token=${token}" >> $GITHUB_OUTPUT
-    - name: Find the tag for a given image digest in Dockerhub
+    - name: Login to base image registries
+      id: base-registries
+      if: inputs.base_registries_auth != ''
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+      with:
+        registry-auth: ${{ inputs.base_registries_auth }}
+    - name: Login to the base image registry
+      id: base-registry
+      if: |
+        inputs.base_registry != '' &&
+        inputs.base_registry_username != '' &&
+        inputs.base_registry_password != ''
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+      with:
+        registry: ${{ inputs.base_registry }}
+        username: ${{ inputs.base_registry_username }}
+        password: ${{ inputs.base_registry_password }}
+    - name: Login to GitHub container registry
+      id: ghcr
+      if: inputs.github_token_login == 'true'
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    # TODO: consider adding it to the runner image if the install time is significant
+    - name: Install regctl
+      id: install-regctl
+      uses: regclient/actions/regctl-installer@1b705e32d40851370799ea5814e83d0a5f6a70dc  # v0.1.0
+      with:
+        release: v0.11.6
+    - name: Determine the tag for the image being built
       id: tag
       shell: bash
       run: |
         set -euo pipefail
-        target_digest=$(grep '^ARG IMAGE_SHA=' ${{ inputs.context }}/${{ inputs.dockerfile }} | cut -d= -f2)
-        echo "Image digest: ${target_digest}"
 
-        # find a tag whose digest matches the given one and which is not called 'latest'
-        page=1
-        block_size=50
-        url="${{ inputs.dockerhub_registry_url }}/repositories/${docker_repository}/tags"
-        total_tags=$(curl -s ${url} | jq -r '.count')
-        tag=null
-        while [[ ${tag} == null && ${page} -le ${total_tags} ]]; do
-          # the authorization token is added to the request if it has a non-empty value
-          tag=$(curl \
-            -s ${token:+-H "Authorization: JWT ${{ steps.dockerhub-token.outputs.token }}"} \
-            "${url}?page_size=${block_size}&page=${page}" \
-            | jq -r --arg digest "${target_digest}" \
-            '.results // [] | [.[] | select(.digest == $digest and .name != "latest") | .name] | sort | first')
-          ((page+=1))
-        done
-        if [[ ${tag} == null ]]; then
-          echo "❗️Tag for digest ${target_digest} not found"
+        dockerfile="$(< '${{ inputs.context }}/${{ inputs.dockerfile }}')"
+        tag=''
+        if [[ "${dockerfile}" =~ (^|$'\n')ARG\ IMAGE_TAG=([^$'\n']+) ]]; then
+          tag="${BASH_REMATCH[2]}"
+        fi
+        if [[ -n "${tag}" ]]; then
+          echo "✅ Found a tag: ${tag}"
+          echo "image_tag=${tag}" >> "${GITHUB_OUTPUT}"
+          exit 0
+        fi
+        digest=''
+        if [[ "${dockerfile}" =~ (^|$'\n')ARG\ IMAGE_SHA=([^$'\n']+) ]]; then
+          digest="${BASH_REMATCH[2]}"
+        fi
+        if [[ -z "${digest}" ]]; then
+          echo '❌ Dockerfile specifies neither a tag nor a digest: both IMAGE_TAG and IMAGE_SHA are missing'
           exit 1
         fi
-        echo "✅ Matching tag found: ${tag}"
-        echo "image_tag=$tag" >> $GITHUB_OUTPUT
+
+        echo 'ℹ️ Falling back to sequentially searching a tag corresponding to the digest'
+
+        # List all repository tags, excluding `latest` and Cosign signatures
+        if ! tag_list="$(
+          regctl tag ls \
+            --exclude latest \
+            --exclude 'sha256-.*' \
+            "${docker_repository}"
+        )"; then
+          echo "❌ Failed to list tags for ${docker_repository}"
+          exit 1
+        fi
+
+        # Construct an array of tags with the newer versions at the start
+        # (if not all tags are versions, the sorting still works)
+        mapfile -t tags < <(
+          printf '%s\n' "${tag_list}" \
+            | sort --reverse --version-sort
+        )
+
+        # Since regctl has built-in retry/backoff logic, we only add a per-loop
+        # failure limit to abort fast when even retry-capable lookups fail
+        # consistently
+        failures=0
+        failure_limit=3
+        for tag in "${tags[@]}"; do
+          if ! tag_digest="$(regctl image digest "${docker_repository}:${tag}")"; then
+            echo "⚠️ Failed to look up the digest for ${tag}"
+            (( failures += 1 ))
+            if (( failures >= failure_limit )); then
+              echo "❌ Too many failed digest lookups: ${failure_limit}"
+              exit 1
+            fi
+            continue
+          fi
+          if [[ "${digest}" == "${tag_digest}" ]]; then
+            echo "✅ Found a tag matching the digest: ${tag}"
+            echo "image_tag=${tag}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+        done
+
+        echo "❌ Failed to find a tag matching the digest ${digest}"
+        exit 1
     - name: Determine Dockerfile suffix
       id: dockerfile-suffix
       shell: bash
@@ -130,9 +225,22 @@ runs:
           suffix=""
         fi
         echo "suffix=$suffix" >> $GITHUB_OUTPUT
+    - name: Set up qemu
+      id: setup-qemu
+      uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a  # v4.3.0
+      with:
+        cache-image: true
+    - name: Set up buildx
+      id: setup-buildx
+      uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e  # v4.3.0
+    # TODO: delete this after initial testing
+    - name: Show buildx platforms
+      id: buildx-inspect
+      shell: bash
+      run: docker buildx inspect --bootstrap
     - name: Build and push docker image
       id: build-image
-      uses: docker/build-push-action@v6.18.0
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
       with:
         context: ${{ inputs.context }}
         file: ${{ inputs.context }}/${{ inputs.dockerfile }}
@@ -180,7 +288,7 @@ runs:
             }' > ${artifact}.json
     - name: Upload pr-comment-data.json as artifact
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
       with:
         name: ${{ steps.pr-data.outputs.artifact }}
         path: ${{ steps.pr-data.outputs.artifact }}.json
@@ -199,7 +307,7 @@ runs:
         fi
     - name: Send notification to slack
       if: ${{ !cancelled() }}
-      uses: slackapi/slack-github-action@v2.1.1
+      uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d  # v4.0.0
       with:
         webhook: ${{ inputs.slack_webhook_url }}
         webhook-type: incoming-webhook
