@@ -255,3 +255,21 @@ git push
 A reusable workflow that's used to deploy files from GitHub to WPEngine.
 
 For more info on inputs, secrets and setup of this workflow, see the full documentation in [Saritasa DevOps](https://devops.docs.saritasa.cloud/cicd/wordpress/wpengine/)
+
+## Cleanup PR caches
+
+PR-specific caches can be deleted after the pull request is closed by using the `cleanup-pr-cache.yaml` reusable workflow:
+
+```yaml
+  # Delete all caches created specifically for this PR
+  # This includes pre-commit, mise and uv caches scoped to refs/pull/<PR>/merge
+  cleanup-pr-cache:
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed'
+    permissions:
+      actions: write
+    uses: saritasa-nest/saritasa-github-actions/.github/workflows/cleanup-pr-cache.yaml@v6.3
+```
+
+That way workflow won't be able to delete different PR caches, or caches from `main` branch. 

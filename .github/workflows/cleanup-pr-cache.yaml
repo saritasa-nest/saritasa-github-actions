@@ -1,0 +1,47 @@
+---
+name: Cleanup PR caches
+
+on:
+  workflow_call:
+
+jobs:
+  cleanup-pr-cache:
+    runs-on: saritasa-rocks-eks
+    timeout-minutes: 15
+    permissions:
+      actions: write
+    steps:
+      - name: Delete PR caches
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: |
+          echo "Deleting caches for $PR_REF"
+
+          while true; do
+            cache_ids=$(
+              curl -fsSL -G \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                --data-urlencode "ref=$PR_REF" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/caches" \
+               | jq -r '.actions_caches[].id'
+            )
+
+            if [[ -z "$cache_ids" ]]; then
+              echo "No caches in $PR_REF"
+              break
+            fi
+
+            for cache_id in $cache_ids; do
+              echo "Deleting cache ID $cache_id"
+              curl -fsSL \
+                -X DELETE \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/caches/$cache_id"
+            done
+          done
