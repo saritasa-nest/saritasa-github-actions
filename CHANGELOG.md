@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-15
+
+[v6.4]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/53)
+- Update `fastlane-android` action steps
+
 ## 2026-07-10
 
 [v6.2]
