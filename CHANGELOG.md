@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-04
+
+[v7.1]
+
+- [associated PR](https://github.com/saritasa-nest/saritasa-github-actions/pull/55)
+- Install `trivy` directly from GitHub release assets in the `security-audit` action instead of `aquasecurity/setup-trivy`, whose install script fails because `get.trivy.dev` no longer resolves
+
 ## 2026-09-15
 
 [v6.4]

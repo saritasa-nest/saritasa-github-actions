@@ -56,10 +56,31 @@ runs:
         cache-suffix: "security-audit"
         working-directory: ${{github.action_path}}
 
+    # Install trivy directly from GitHub release assets instead of using
+    # `aquasecurity/setup-trivy`, whose install script downloads binaries from
+    # `get.trivy.dev`, which no longer resolves (NXDOMAIN)
     - name: Install trivy
-      uses: aquasecurity/setup-trivy@v0.2.6
-      with:
-        version: ${{inputs.trivy-version}}
+      shell: bash
+      env:
+        TRIVY_VERSION: ${{inputs.trivy-version}}
+      run: |
+        set -euo pipefail
+        version="${TRIVY_VERSION#v}"
+        if [[ "$version" == "latest" ]]; then
+          latest_url="$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/aquasecurity/trivy/releases/latest)"
+          version="${latest_url##*/v}"
+        fi
+        install_dir="$HOME/.local/bin/trivy-bin"
+        base_url="https://github.com/aquasecurity/trivy/releases/download/v${version}"
+        tarball="trivy_${version}_Linux-64bit.tar.gz"
+        tmp_dir="$(mktemp -d)"
+        mkdir -p "$install_dir"
+        curl -fsSL -o "$tmp_dir/$tarball" "$base_url/$tarball"
+        curl -fsSL -o "$tmp_dir/checksums.txt" "$base_url/trivy_${version}_checksums.txt"
+        (cd "$tmp_dir" && grep " ${tarball}\$" checksums.txt | sha256sum -c -)
+        tar -xzf "$tmp_dir/$tarball" -C "$install_dir" trivy
+        rm -rf "$tmp_dir"
+        echo "$install_dir" >> "$GITHUB_PATH"
 
     - name: Prepare data.json for PR and Slack comments
       working-directory: ${{github.action_path}}
